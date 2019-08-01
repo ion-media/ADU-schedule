@@ -149,12 +149,12 @@ class GID:
         self.Total['NP Mix %'] = 1 - self.Total['P Mix %']
 
         self.P['Guar'] = self.Sold_P['Deal Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
-        self.P['ADUs'] = round(max(0, self.Total['P Mix %'] * self.Total['Imps Owed'] / self.P['Q2 Imp']))
+        self.P['ADUs'] = round(self.Total['P Mix %'] * self.Total['Imps Owed'] / self.P['Q2 Imp'])
         self.P['Est'] = self.Sold_P['Delv Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round(max(0, self.Total['NP Mix %'] * self.Total['Imps Owed'] / self.NP['Q2 Imp']))
+        self.NP['ADUs'] = round(self.Total['NP Mix %'] * self.Total['Imps Owed'] / self.NP['Q2 Imp'])
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -215,13 +215,6 @@ def form_df(result):
                         row.append(element[key])
             else:
                 row.append(element)
-#[*self.GName, self.DealNum, self.Marketplace, *self.Advertiser,self.AEName, self.Agency, self.DealName, *self.SoldDemo, *self.StartDate, *self.EndDate]
-#[self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
-
-
-
-        #elem_list= v[1]
-        #row.append(elem_list[0])
         
         rows.append(row)
     output = pd.DataFrame(rows)
@@ -377,7 +370,25 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
                         left = round_unit(row['P ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[1]
                 dic_p[row['Guarantee ID']] = new
 
-            if row['NP ADUs'] != 0: #If there is Nonprime ADU
+            if row['P ADUs'] > 0: #If there is Prime ADU
+                scheduled_spots = past_s_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime spots baselayer
+                total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime spots 
+                new = dic_p[row['Guarantee ID']]
+                if total == 0: # if no prime spots
+                    try: # Check whether there is ADU scheduled
+                        scheduled_spots = past_adu_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime ADU baselayer
+                        total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime ADU
+                    except: # if no spots and ADUs scheduled, do not schedule new ADU
+                        dic_p[row['Guarantee ID']] = new
+                        
+                left = 0 
+                for i in range(weeks.index(s), weeks.index(e) + 1): # schedule new ADU proportional to the scheduled_spots
+                    if scheduled_spots[i - weeks.index(s)] != 0:
+                        new[i] = round_unit(row['P ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[0]
+                        left = round_unit(row['P ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[1]
+                dic_p[row['Guarantee ID']] = new
+
+            if row['NP ADUs'] > 0: #If there is Nonprime ADU
 
                 scheduled_spots = past_s_np[row['Guarantee ID']][total_weeks.index(s):]
                 total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1])
@@ -394,13 +405,49 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
                     if scheduled_spots[i - weeks.index(s)] != 0:
                         new[i] = round_unit(row['NP ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[0]
                         left = round_unit(row['NP ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[1]
-                dic_np[row['Guarantee ID']] = new                
+                dic_np[row['Guarantee ID']] = new        
+                
+                
+                
+            if row['P ADUs'] < 0: #If there is Prime ADU need to take back
+                new = dic_p[row['Guarantee ID']]
+                try: # Check whether there is ADU scheduled
+                    scheduled_spots = past_adu_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime ADU baselayer
+                    total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime ADU
+                except: # if ADUs scheduled, do not take back ADU
+                    dic_p[row['Guarantee ID']] = new
+                        
+                left = 0 
+                for i in range(weeks.index(s), weeks.index(e) + 1): # take back ADU proportional to the scheduled_spots
+                    u = scheduled_spots[i - weeks.index(s)]
+                    if u != 0:
+                        new[i] = -min(u, -round(row['P ADUs'] / total * u + left))
+                        left = (row['P ADUs'] / total * u + left) - new[i]
+                dic_p[row['Guarantee ID']] = new
+
+            if row['NP ADUs'] < 0: #If there is Prime ADU need to take back
+                new = dic_np[row['Guarantee ID']]
+                try: # Check whether there is ADU scheduled
+                    scheduled_spots = past_adu_np[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime ADU baselayer
+                    total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime ADU
+                except: # if ADUs scheduled, do not take back ADU
+                    dic_np[row['Guarantee ID']] = new
+                        
+                left = 0 
+                for i in range(weeks.index(s), weeks.index(e) + 1): # take back ADU proportional to the scheduled_spots
+                    u = scheduled_spots[i - weeks.index(s)]
+                    if u != 0:
+                        new[i] = -min(u, -round(row['NP ADUs'] / total * u + left))
+                        left = (row['NP ADUs'] / total * u + left) - new[i]
+                dic_np[row['Guarantee ID']] = new
+      
                 
     schedule_p_df = pd.DataFrame.from_dict(dic_p, orient='index', columns=weeks).reset_index()
     schedule_p_df = schedule_p_df.rename(columns={'index': 'Guarantee ID'})
     schedule_np_df = pd.DataFrame.from_dict(dic_np, orient='index', columns=weeks).reset_index()
     schedule_np_df = schedule_np_df.rename(columns={'index': 'Guarantee ID'})
     return schedule_p_df, schedule_np_df
+
 
 #@df is the raw dealmake data
 #@quater deleted ?
@@ -433,16 +480,17 @@ def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, start
 
     return date_string, basic_info, baselayer_p, baselayer_np, P_ADU_schedule, NP_ADU_schedule #, changeDF
 
-def format_df(raw, new):
-    writer = pd.ExcelWriter(DIR_OUTPUT+datetime.strptime(raw[0], '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Schedule.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+
+def format_df(raw, new, name):
+    writer = pd.ExcelWriter(datetime.strptime(raw[0], '%m/%d/%Y').strftime('%Y-%m-%d')+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
     workbook = writer.book
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
-    raw[1].to_excel(writer, sheet_name='ADU Schedule', startrow=7, startcol=2, header=False, index = False)
-    new.to_excel(DIR_OUTPUT+datetime.strptime(raw[0], '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx', index = False)
+    raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
+    new.to_excel(datetime.strptime(raw[0], '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx', index = False)
 
-    worksheet = writer.sheets['ADU Schedule']
+    worksheet = writer.sheets[name]
     
     # Clean the headers
     for col_num, value in enumerate(raw[1].columns.values):
@@ -458,7 +506,7 @@ def format_df(raw, new):
     s = [] # stores the start column of each dataframe
     e = [] # stores the end column of each dataframe
     for i in range(2, len(raw)):
-        raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADU Schedule', startrow=7, startcol=count_col, index=False,
+        raw[i].iloc[:, 1:].to_excel(writer, sheet_name=name, startrow=7, startcol=count_col, index=False,
                                     header=False)
         for col_num, value in enumerate(raw[i].columns.values[1:]):
             worksheet.write(5, count_col + col_num, value)
@@ -591,7 +639,7 @@ def format_df(raw, new):
     worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
 
     # Autofilter
-    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 2) + str(count_row))
+    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 2) + str(count_row+100))
 
     # Get the Sum
     for col in range(s[0] - 4, e[3] + 3):
@@ -633,6 +681,7 @@ def format_df(raw, new):
 
     writer.save()
     return s, s_letter, e_letter
+
 
 def new_data(raw, quarters):
     general = dict()
@@ -956,16 +1005,15 @@ def get_ratings(df, internal_estimates, cur_q):
     ratings.columns = ['Demo', 'Prime Imp', 'Non Prime Imp']
     return ratings
 
+def seperate(raw):
+    df = raw[1]
+    pos = df[df['Total Imps Owed']>=0]
+    gid = pos['Guarantee ID'].tolist()
 
-def copy_rename(old_file_name, new_file_name):
-    src_dir= os.curdir
-    dst_dir= "C:\\ION\\Commercial\\"
-    src_file = os.path.join(src_dir, old_file_name)
-    shutil.copy(src_file,dst_dir)
-    dst_file = os.path.join(dst_dir, old_file_name)
-    new_dst_file_name = os.path.join(dst_dir, new_file_name)
-    os.rename(dst_file, new_dst_file_name)
-    return
+    sch = raw[0], pos, raw[2][raw[2]['Guarantee ID'].isin(gid)], raw[3][raw[3]['Guarantee ID'].isin(gid)], raw[4][raw[4]['Guarantee ID'].isin(gid)], raw[5][raw[5]['Guarantee ID'].isin(gid)]
+    takeback = raw[0], df[df['Total Imps Owed']<0], raw[2][~raw[2]['Guarantee ID'].isin(gid)], raw[3][~raw[3]['Guarantee ID'].isin(gid)], raw[4][~raw[4]['Guarantee ID'].isin(gid)], raw[5][~raw[5]['Guarantee ID'].isin(gid)]
+    return sch, takeback
+
 
 def get_report_values(quarters, startdate, liab):
     last_q = quarter_startdate(quarters, find_quarters(quarters, startdate))[0]
@@ -1145,7 +1193,9 @@ def main(Q_num = 2):
     print('Time for computing liability: ', t4 - t3)
 
     print('Exporting ADU schedule file')
-    format_df(raw, liab)
+    sep = seperate(raw)
+    format_df(sep[0], liab, 'ADU Schedule')
+    format_df(sep[1], liab, 'ADU Take Back')
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
     
