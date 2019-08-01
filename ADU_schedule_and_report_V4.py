@@ -16,8 +16,8 @@ import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 
 
-DIR_INPUT='C:/work_project/commercial/temp_calculation/'
-DIR_OUTPUT='C:/work_project/commercial/temp_calculation/'
+DIR_INPUT='C:/ION/Commercial/ADU_Report/V2/'
+DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
@@ -352,24 +352,6 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
                 dic_p[row['Guarantee ID']] = [0] * len(weeks)
                 dic_np[row['Guarantee ID']] = [0] * len(weeks)
             
-            if row['P ADUs'] != 0: #If there is Prime ADU
-                scheduled_spots = past_s_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime spots baselayer
-                total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime spots 
-                new = dic_p[row['Guarantee ID']]
-                if total == 0: # if no prime spots
-                    try: # Check whether there is ADU scheduled
-                        scheduled_spots = past_adu_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime ADU baselayer
-                        total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime ADU
-                    except: # if no spots and ADUs scheduled, do not schedule new ADU
-                        dic_p[row['Guarantee ID']] = new
-                        
-                left = 0 
-                for i in range(weeks.index(s), weeks.index(e) + 1): # schedule new ADU proportional to the scheduled_spots
-                    if scheduled_spots[i - weeks.index(s)] != 0:
-                        new[i] = round_unit(row['P ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[0]
-                        left = round_unit(row['P ADUs'] / total * scheduled_spots[i - weeks.index(s)] + left)[1]
-                dic_p[row['Guarantee ID']] = new
-
             if row['P ADUs'] > 0: #If there is Prime ADU
                 scheduled_spots = past_s_p[row['Guarantee ID']][total_weeks.index(s):] # scheduled spots = prime spots baselayer
                 total = sum(scheduled_spots[:total_weeks.index(weeks[-1]) + 1]) # total number of prime spots 
