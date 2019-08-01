@@ -16,8 +16,8 @@ import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 
 
-DIR_INPUT='C:/ION/Commercial/ADU_Report/V2/'
-DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/'
+DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
@@ -464,13 +464,13 @@ def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, start
 
 
 def format_df(raw, new, name):
-    writer = pd.ExcelWriter(datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+    writer = pd.ExcelWriter(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
     workbook = writer.book
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
     raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
-    new.to_excel(datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx', index = False)
+    new.to_excel(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx', index = False)
 
     worksheet = writer.sheets[name]
     
