@@ -1,20 +1,22 @@
+import os
+import zipfile
+import csv
+import shutil
+
 import pandas as pd
 import numpy as np
+import math
+from collections import defaultdict
+
 import time
 from dateutil.parser import parse
-import math
 import datetime as dt
 from datetime import datetime
-from collections import defaultdict
+
 import xlsxwriter
 from pyxlsb import open_workbook as open_xlsb
-import zipfile
-import os
-import shutil
 from openpyxl import load_workbook
-import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
-
 
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
 DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
