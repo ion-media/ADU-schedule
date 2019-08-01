@@ -16,8 +16,8 @@ import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 
 
-DIR_INPUT='C:/work_project/commercial/temp_calculation/'
-DIR_OUTPUT='C:/work_project/commercial/temp_calculation/'
+DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
