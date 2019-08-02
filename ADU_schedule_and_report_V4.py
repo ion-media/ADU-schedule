@@ -14,6 +14,7 @@ import shutil
 from openpyxl import load_workbook
 import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
+import win32com.client
 
 
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
@@ -1346,6 +1347,45 @@ def get_summary(report_values, date_string, quar):
     wb.save(DIR_OUTPUT+'Summary.xlsx')
     return
 
+def create_pivot():
+    Excel = win32com.client.gencache.EnsureDispatch('Excel.Application') # Excel = win32com.client.Dispatch('Excel.Application')
+    win32c = win32com.client.constants
+
+    wb =Excel.Workbooks.Open(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx')
+    Sheet1 = wb.Worksheets("Sheet1")
+
+    PivotSourceRange = Sheet1.UsedRange
+
+    PivotSourceRange.Select()
+
+    wb.Sheets.Add (After=wb.Sheets("Sheet1"))
+    Sheet2 = wb.Worksheets(2)
+    cl3=Sheet2.Cells(1,1)
+    PivotTargetRange=  Sheet2.Range(cl3,cl3)
+    PivotTableName = 'ReportPivotTable'
+
+    PivotCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=PivotSourceRange, Version=win32c.xlPivotTableVersion14)
+    PivotTable = PivotCache.CreatePivotTable(TableDestination=PivotTargetRange, TableName=PivotTableName, DefaultVersion=win32c.xlPivotTableVersion14)
+
+    PivotTable.PivotFields('ADU Ind').Orientation = win32c.xlRowField
+    PivotTable.PivotFields('ADU Ind').Position = 1
+    PivotTable.PivotFields('Year + Quarter').Orientation = win32c.xlRowField
+    PivotTable.PivotFields('Year + Quarter').Position = 2
+    PivotTable.PivotFields('In System').Orientation = win32c.xlPageField
+    PivotTable.PivotFields('In System').Position = 1
+    PivotTable.PivotFields('Primary Demo Non-ADU Equiv Deal Imp').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Booked Dollars').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Primary Demo Equiv Post Imp').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Effec_Delv_Imp').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Effec_Delv_value').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Owed_Imp').Orientation = win32c.xlDataField
+    PivotTable.PivotFields('Owed_value').Orientation = win32c.xlDataField
+
+    wb.Save()
+    wb.Close(True)
+    Excel.Application.Quit()    
+
+
 
 def main(Q_num = 2):
     print("Reading Data")
@@ -1366,21 +1406,13 @@ def main(Q_num = 2):
     quarter_sd = quarter_startdate(quarters, four_q)
     startq = quarter_sd[1] #schedule start date
     endq = quarter_sd[1 + Q_num] # schedule end date
-    
-    #df['Week Start Date']= pd.to_datetime(df['Week Start Date']) 
-    #df = df[df['Week Start Date'] < parse(endq)]
   
     t2 = time.time()
     print('Time for reading files: ', t2 - t1)
+
     print('Scheduling ADU and generating new data')
     raw = raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq)
-
     general = new_data(raw, quarters)
-
-    #changeDF = raw[-1]
-    #df['Guarantee Name'] = changeDF[0]
-    #df['Selling Title'] = changeDF[1]
-    
     new = newdata_to_df(df, general, raw[1])
     t3 = time.time()
     print('Time for scheduling ADU and generating new data: ', t3 - t2)
@@ -1396,14 +1428,21 @@ def main(Q_num = 2):
     format_take_back(sep[1], liab, 'ADU Take Back')
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
-    
+
+    print('Creating pivot table')
+    create_pivot()
+    t6 = time.time()
+    print('Time for creating pivot table: ', t6-t5)
+
     print('Generating suammary')
     quar, report_values = get_report_values(quarters, startdate, liab)
     get_summary(report_values, date_string, quar)
-    print('Time for generating summary')
+    t7 = time.time()
+    print('Time for generating summary: ', t7-t6)
+    
     print('Done')
 
-    print('Total Time: ', t5 - t1)
+    print('Total Time: ', t7 - t1)
     return
 
 main()
