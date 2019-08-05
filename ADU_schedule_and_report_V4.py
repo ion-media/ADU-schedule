@@ -1,24 +1,28 @@
+import os
+import zipfile
+import csv
+import shutil
+
 import pandas as pd
 import numpy as np
+import math
+from collections import defaultdict
+
 import time
 from dateutil.parser import parse
-import math
 import datetime as dt
 from datetime import datetime
-from collections import defaultdict
+
 import xlsxwriter
 from pyxlsb import open_workbook as open_xlsb
-import zipfile
-import os
-import shutil
 from openpyxl import load_workbook
-import csv
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
 import win32com.client
 
-
+# Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
 DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
+DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
@@ -47,6 +51,7 @@ def dayparts(r):
     return None
 
 
+# structured class to store each guarantee ID group
 class GID:
     def __init__(self, r):
         self.row = r
@@ -85,12 +90,9 @@ class GID:
             self.NP['Q2 Imp'] = ratings.loc[ratings['Demo'] == self.SoldDemo, 'Non Prime Imp'].iloc[0]
         except:
             print(self.SoldDemo)
+        self.update_by_daypart(self.row)
+        return
 
-        l = [self.GName, self.DealNum, self.Marketplace, \
-             self.Advertiser, 
-             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate] \
-            + self.type_by_daypart(self.row)
-        return l
 
     def update_info(self, r):
         self.DealName.add(r['Deal Name'])
@@ -102,14 +104,11 @@ class GID:
             self.StartDate = r['Week Start Date']
         if date_comparison(self.EndDate, r['Week End Date']):
             self.EndDate = r['Week End Date']
+        self.update_by_daypart(r)
 
-        l = [self.GName, self.DealNum, self.Marketplace,\
-             self.Advertiser, 
-             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate] \
-            + self.type_by_daypart(r)
-        return l
 
-    def type_by_daypart(self, r):
+
+    def update_by_daypart(self, r):
         if r['ADU Ind'] == 'N':
             if dayparts(r) == 'P':
                 self.Sold_P['Booked $'] += r['Booked Dollars']
@@ -160,7 +159,12 @@ class GID:
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
 
-        return [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
+        return 
+
+    def GID_to_List(self):
+        return [self.GName, self.DealNum, self.Marketplace, self.Advertiser, \
+             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate] \
+             + [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
 
 
 def get_dict(df, ratings, endq):
@@ -170,16 +174,17 @@ def get_dict(df, ratings, endq):
             # if the Guarantee ID has not shown before, get new info
             if row['Guarantee ID'] not in dic: 
                 c = GID(row)
-                dic[row['Guarantee ID']] = [c, c.new_info(ratings)]
+                c.new_info(ratings)
+                dic[row['Guarantee ID']] = c
             # else update the information
             else: 
-                dic[row['Guarantee ID']][1] = dic[row['Guarantee ID']][0].update_info(row)
+                dic[row['Guarantee ID']].update_info(row)
         else:
             continue
     return dic
 
 
-# read in the result from get_dict, turn dictionary to dataframe
+# read in the result from get_dict, turn dictionary to dataframe of all guarantee id deal
 def form_df(result):
     column_names = ['Guarantee ID', 'Guarantee Name', 'Deal ID', 'Marketplace',\
                     'Advertiser', \
@@ -199,7 +204,7 @@ def form_df(result):
         row = []
         row.append(k)  # G_ID
 
-        for element in v[1]:
+        for element in v.GID_to_List():
             if type(element) is set:
                 element = list(element)
                 row.append(','.join(str(e) for e in element))
@@ -319,7 +324,9 @@ def round_unit(num):
     left = num - result
     return (result, left)
 
-
+#@past_..  the sold/adu units in the spots  , called base line
+#@df1  get_dict->form_df->output->df1 contain guarantee deal info
+#@stq,edq, start/end quater
 def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq, startdate):
     weeks = week_range(startq, endq)
 
@@ -433,7 +440,6 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
 
 
 #@df is the raw dealmake data
-#@quater deleted ?
 #data_String: the data to start adu schdul
 def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq):
    
@@ -456,22 +462,27 @@ def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, start
     
     baselayer_p = baselayer_p.rename(columns={'index': 'Guarantee ID'})
     baselayer_np = baselayer_np.rename(columns={'index': 'Guarantee ID'})
+    baselayer_p.sort_values(by=['Guarantee ID'],inplace=True)
+    baselayer_np.sort_values(by=['Guarantee ID'],inplace=True)
 
     P_ADU_schedule, NP_ADU_schedule = schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq, startdate)
+    P_ADU_schedule.sort_values(by=['Guarantee ID'],inplace=True)
+    NP_ADU_schedule.sort_values(by=['Guarantee ID'],inplace=True)
 
     basic_info = output.copy()
+    basic_info.sort_values(by=['Guarantee ID'],inplace=True)
 
     return date_string, basic_info, baselayer_p, baselayer_np, P_ADU_schedule, NP_ADU_schedule #, changeDF
 
 
 def format_df(raw, new, name):
-    writer = pd.ExcelWriter(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')
     workbook = writer.book
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
     raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
-    new.to_excel(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx', index = False)
+    new.to_excel(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Report.xlsx', index = False)
 
     worksheet = writer.sheets[name]
     
@@ -668,7 +679,7 @@ def format_df(raw, new, name):
 
 
 def format_take_back(raw, new, name):
-    writer = pd.ExcelWriter(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
     workbook = writer.book
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
@@ -724,11 +735,10 @@ def format_take_back(raw, new, name):
         worksheet.write_formula(col + str(r), '{=' + Total_ADU_col + str(r) + '-' + Total_P_ADU_col + str(
             r) + '-' + Total_NP_ADU_col + str(r) + '}')
 
-    # Take Back Deal Indicator
+    # Take Back Deal
     c = xlsxwriter.utility.xl_col_to_name(e[-1] + 3)
     for r in range(8, count_row + 7):
-        worksheet.write_formula(c + str(r), '{=IF(OR(' + Total_P_ADU_col + str(
-            r) + '<0, ' + Total_NP_ADU_col + str(r) + '<0), "Y", "N"'+')}')    
+        worksheet.write_formula(c + str(r), '{=' + Total_P_ADU_col + str(r) + '+' + Total_NP_ADU_col + str(r)+'}')    
 
 
     # Header
@@ -824,7 +834,7 @@ def format_take_back(raw, new, name):
 
     worksheet.write(3, e[3] + 3, 'Deals', format_g)
     worksheet.write(4, e[3] + 3, 'Take back', format_g)
-    worksheet.write(5, e[3] + 3, 'Ind', format_g)
+    worksheet.write(5, e[3] + 3, '', format_g)
 
 
     # Group Columns
@@ -839,7 +849,7 @@ def format_take_back(raw, new, name):
     worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 3) + str(count_row+6))
 
     # Get the Sum
-    for col in range(s[0] - 4, e[3] + 3):
+    for col in range(s[0] - 4, e[3] + 4):
         col = xlsxwriter.utility.xl_col_to_name(col)
         worksheet.write_formula(col + str(count_row + 8),
                                 '{=subtotal(9, ' + col + '8:' + col + str(count_row + 7) + ')}')
@@ -888,15 +898,9 @@ def new_data(raw, quarters):
     NP_ADU_dict = raw[5].to_dict('index')
 
     for k, v in P_ADU_dict.items():
-        for key, value in v.items():
-            if key == 'Guarantee ID':
-                gid = value
-            # key is Monday of scheduling weeks
-            else: 
-                # if there is new schedule for this week
-                if value > 0: 
-                    if gid not in general:
-                        general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
+        gid=v['Guarantee ID']
+        if gid not in general:
+            general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
                                         'Week End Date': [], 'Selling Title': [], \
                                         'Days And Times': [], 'ADU Ind': [], 'Booked Dollars': [],
                                         'Primary Demo Equiv Deal Imp': [], \
@@ -905,70 +909,69 @@ def new_data(raw, quarters):
                                         #'Primary Demo Equiv Ratecard Imp': [], 
                                         'Primary Demo Deal CPM': [], \
                                         'Equiv Units': []}
-                    # filling all the information
-                    general[gid]['Week Start Date'].append(key)
-                    general[gid]['Equiv Units'].append(value)
+        for key, value in v.items():
+            if key != 'Guarantee ID' and value > 0:
+                # filling all the information
+                general[gid]['Week Start Date'].append(key)
+                general[gid]['Equiv Units'].append(value)
 
-                    y = key.split('/')[2]
-                    general[gid]['Year'].append(y)
+                y = key.split('/')[2]
+                general[gid]['Year'].append(y)
 
-                    mon = pd.date_range(key, periods=1, freq='W-MON').strftime('%m/%d/%Y').tolist()[0]
-                    q = quarters.loc[quarters['start_date'].astype(str) == mon, 'quarter'].iloc[0][1]
+                mon = pd.date_range(key, periods=1, freq='W-MON').strftime('%m/%d/%Y').tolist()[0]
+                q = quarters.loc[quarters['start_date'].astype(str) == mon, 'quarter'].iloc[0][1]
 
-                    general[gid]['Quarter'].append(q)
-                    general[gid]['Year + Quarter'].append(y + ' ' + str(q) + 'Q')
-                    general[gid]['Week End Date'].append(pd.date_range(key, periods=1, freq='W-SUN').strftime('%m/%d/%Y').tolist()[0])
-                    general[gid]['Selling Title'].append('P')
-                    general[gid]['Days And Times'].append('')
-                    general[gid]['ADU Ind'].append('Y')
-                    general[gid]['Booked Dollars'].append(0)
-                    general[gid]['Primary Demo Equiv Deal Imp'].append(0)
-                    #general[gid]['Primary Demo Equiv Post Imp - IE 1'].append(0)
-                    general[gid]['Primary Demo Non-ADU Equiv Deal Imp'].append(0)
-                    #general[gid]['Primary Demo Equiv Ratecard Imp'].append(0)
-                    general[gid]['Primary Demo Deal CPM'].append(0)
+                general[gid]['Quarter'].append(q)
+                general[gid]['Year + Quarter'].append(y + ' ' + str(q) + 'Q')
+                general[gid]['Week End Date'].append(pd.date_range(key, periods=1, freq='W-SUN').strftime('%m/%d/%Y').tolist()[0])
+                general[gid]['Selling Title'].append('P')
+                general[gid]['Days And Times'].append('')
+                general[gid]['ADU Ind'].append('Y')
+                general[gid]['Booked Dollars'].append(0)
+                general[gid]['Primary Demo Equiv Deal Imp'].append(0)
+                #general[gid]['Primary Demo Equiv Post Imp - IE 1'].append(0)
+                general[gid]['Primary Demo Non-ADU Equiv Deal Imp'].append(0)
+                #general[gid]['Primary Demo Equiv Ratecard Imp'].append(0)
+                general[gid]['Primary Demo Deal CPM'].append(0)
                 
                
     for k, v in NP_ADU_dict.items():
-        for key, value in v.items():
-            if key == 'Guarantee ID':
-                gid = value
-            else:
-                if value > 0.1:
-                    if gid not in general:
-                        general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
+        gid=v['Guarantee ID']
+        if gid not in general:
+            general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
                                         'Week End Date': [], 'Selling Title': [], \
                                         'Days And Times': [], 'ADU Ind': [], 'Booked Dollars': [],
                                         'Primary Demo Equiv Deal Imp': [], \
                                         #'Primary Demo Equiv Post Imp - IE 1': [],
                                         'Primary Demo Non-ADU Equiv Deal Imp': [], \
-                                        #'Primary Demo Equiv Ratecard Imp': [], \
+                                        #'Primary Demo Equiv Ratecard Imp': [], 
                                         'Primary Demo Deal CPM': [], \
                                         'Equiv Units': []}
-                    general[gid]['Week Start Date'].append(key)
-                    general[gid]['Equiv Units'].append(value)
+        for key, value in v.items():
+            if key != 'Guarantee ID' and value > 0:
+                general[gid]['Week Start Date'].append(key)
+                general[gid]['Equiv Units'].append(value)
 
-                    y = key.split('/')[2]
-                    general[gid]['Year'].append(y)
+                y = key.split('/')[2]
+                general[gid]['Year'].append(y)
 
-                    mon = pd.date_range(key, periods=1, freq='W-MON').strftime('%m/%d/%Y').tolist()[0]
-                    q = quarters.loc[quarters['start_date'].astype(str) == mon, 'quarter'].iloc[0][1]
+                mon = pd.date_range(key, periods=1, freq='W-MON').strftime('%m/%d/%Y').tolist()[0]
+                q = quarters.loc[quarters['start_date'].astype(str) == mon, 'quarter'].iloc[0][1]
 
-                    general[gid]['Quarter'].append(q)
-                    general[gid]['Year + Quarter'].append(y + ' ' + str(q) + 'Q')
-                    general[gid]['Week End Date'].append(pd.date_range(key, periods=1, freq='W-SUN').strftime('%m/%d/%Y').tolist()[0])
-                    general[gid]['Selling Title'].append('NP')
-                    general[gid]['Days And Times'].append('')
-                    general[gid]['ADU Ind'].append('Y')
-                    general[gid]['Booked Dollars'].append(0)
-                    general[gid]['Primary Demo Equiv Deal Imp'].append(0)
-                    #general[gid]['Primary Demo Equiv Post Imp - IE 1'].append(0)
-                    general[gid]['Primary Demo Non-ADU Equiv Deal Imp'].append(0)
-                    #general[gid]['Primary Demo Equiv Ratecard Imp'].append(0)
-                    general[gid]['Primary Demo Deal CPM'].append(0)
+                general[gid]['Quarter'].append(q)
+                general[gid]['Year + Quarter'].append(y + ' ' + str(q) + 'Q')
+                general[gid]['Week End Date'].append(pd.date_range(key, periods=1, freq='W-SUN').strftime('%m/%d/%Y').tolist()[0])
+                general[gid]['Selling Title'].append('NP')
+                general[gid]['Days And Times'].append('')
+                general[gid]['ADU Ind'].append('Y')
+                general[gid]['Booked Dollars'].append(0)
+                general[gid]['Primary Demo Equiv Deal Imp'].append(0)
+                #general[gid]['Primary Demo Equiv Post Imp - IE 1'].append(0)
+                general[gid]['Primary Demo Non-ADU Equiv Deal Imp'].append(0)
+                #general[gid]['Primary Demo Equiv Ratecard Imp'].append(0)
+                general[gid]['Primary Demo Deal CPM'].append(0)
                 
     return general
-
 
 def newdata_to_df(df, general, output):
     df['In System'] = 'Y'
@@ -1204,6 +1207,20 @@ def get_ratings(df, internal_estimates, cur_q):
     ratings.columns = ['Demo', 'Prime Imp', 'Non Prime Imp']
     return ratings
 
+
+def copy_rename(old_file_name, new_file_name):
+    src_dir= DIR_INPUT
+    src_file = os.path.join(src_dir, old_file_name)
+    dst_dir= DIR_ARCHIVE
+    dst_file = os.path.join(dst_dir, old_file_name)
+    new_dst_file_name = os.path.join(dst_dir, new_file_name)
+
+    shutil.copy(src_file,dst_dir)
+    os.rename(dst_file, new_dst_file_name)
+    os.remove(src_file)
+    return
+
+
 def seperate(raw):
     df = raw[1]
     pos = df[df['Total Imps Owed']>=0]
@@ -1394,6 +1411,8 @@ def main(Q_num = 2):
     
     zf = zipfile.ZipFile(DIR_INPUT+'Dealmaker BI weekly reports.zip') 
     df = pd.read_csv(zf.open('Report 1.csv'))
+    zf.close()
+
     date = datetime.now()+ dt.timedelta(days=7)
     date_string = str(date.strftime("%m/%d/%Y"))
     startdate = datetime.strptime(date_string, '%m/%d/%Y')
@@ -1409,6 +1428,9 @@ def main(Q_num = 2):
   
     t2 = time.time()
     print('Time for reading files: ', t2 - t1)
+
+    print("Keep a copy of raw zip file")
+    copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
 
     print('Scheduling ADU and generating new data')
     raw = raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq)
