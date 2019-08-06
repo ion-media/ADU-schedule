@@ -66,7 +66,7 @@ class GID:
         self.ADU_P = dictionary.copy()
         self.ADU_NP = dictionary.copy()
         self.Total = dictionary.copy()
-        self.P = {'Guar': 0, 'Est': 0, 'Delv': 0, 'Q2 Imp': 0, 'ADUs': 0}
+        self.P = {'Guar': 0, 'Est': 0, 'Delv': 0, 'Forecast Imp': 0, 'ADUs': 0}
         self.NP = self.P.copy()
 
     def new_info(self, ratings):
@@ -86,8 +86,8 @@ class GID:
 
         # forecast ratings
         try:
-            self.P['Q2 Imp'] = ratings.loc[ratings['Demo'] == self.SoldDemo, 'Prime Imp'].iloc[0]
-            self.NP['Q2 Imp'] = ratings.loc[ratings['Demo'] == self.SoldDemo, 'Non Prime Imp'].iloc[0]
+            self.P['Forecast Imp'] = ratings.loc[ratings['Demo'] == self.SoldDemo, 'Prime Imp'].iloc[0]
+            self.NP['Forecast Imp'] = ratings.loc[ratings['Demo'] == self.SoldDemo, 'Non Prime Imp'].iloc[0]
         except:
             print(self.SoldDemo)
         self.update_by_daypart(self.row)
@@ -149,12 +149,12 @@ class GID:
         self.Total['NP Mix %'] = 1 - self.Total['P Mix %']
 
         self.P['Guar'] = self.Sold_P['Deal Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
-        self.P['ADUs'] = round(self.Total['P Mix %'] * self.Total['Imps Owed'] / self.P['Q2 Imp'])
+        self.P['ADUs'] = round(self.Total['P Mix %'] * self.Total['Imps Owed'] / self.P['Forecast Imp'])
         self.P['Est'] = self.Sold_P['Delv Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round(self.Total['NP Mix %'] * self.Total['Imps Owed'] / self.NP['Q2 Imp'])
+        self.NP['ADUs'] = round(self.Total['NP Mix %'] * self.Total['Imps Owed'] / self.NP['Forecast Imp'])
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -197,7 +197,7 @@ def form_df(result):
                     'ADU NP Delv Imp', 'ADU NP Imps Owed', 'ADU NP Units', 'ADU NP CPM', 'Total Booked $', \
                     'Total Deal Imp', 'Total Delv Imp', 'Total Imps Owed', 'Total Units', 'Total CPM', \
                     'Total % Delv', 'Total Liability $', 'Total P Mix %', 'Total NP Mix %', 'Total ADUs', \
-                    'P Guar', 'P Est', 'P Delv', 'P Q2 Imp', 'P ADUs', 'NP Guar', 'NP Est', 'NP Delv', 'NP Q2 Imp', \
+                    'P Guar', 'P Est', 'P Delv', 'P Forecast Imp', 'P ADUs', 'NP Guar', 'NP Est', 'NP Delv', 'NP Forecast Imp', \
                     'NP ADUs']
     rows = []
     for k, v in result.items():
@@ -213,7 +213,7 @@ def form_df(result):
                     for key in ['Booked $', 'Deal Imp', 'Delv Imp', 'Imps Owed', 'Units', 'CPM']:
                         row.append(element[key])
                 elif len(element) ==5:
-                    for key in ['Guar', 'Est', 'Delv', 'Q2 Imp', 'ADUs']:
+                    for key in ['Guar', 'Est', 'Delv', 'Forecast Imp', 'ADUs']:
                         row.append(element[key])
                 else:
                     for key in ['Booked $', 'Deal Imp', 'Delv Imp', 'Imps Owed', 'Units', 'CPM', \
@@ -236,7 +236,7 @@ def form_df(result):
                      'ADU NP Delv Imp', 'ADU NP Imps Owed', 'ADU NP Units', 'ADU NP CPM', 'Total Booked $', \
                      'Total Deal Imp', 'Total Delv Imp', 'Total % Delv', 'Total Imps Owed', 'Total Units', 'Total CPM', \
                      'Total Liability $', 'Total P Mix %', 'Total NP Mix %', 'P Guar', \
-                     'NP Guar', 'P Est', 'NP Est', 'P Delv', 'NP Delv', 'P Q2 Imp', 'NP Q2 Imp', 'P ADUs', 'NP ADUs', \
+                     'NP Guar', 'P Est', 'NP Est', 'P Delv', 'NP Delv', 'P Forecast Imp', 'NP Forecast Imp', 'P ADUs', 'NP ADUs', \
                      'Total ADUs']]
     return output
 
@@ -1009,15 +1009,15 @@ def newdata_to_df(df, general, output):
         subset=['Guarantee ID', 'Week Start Date', 'Week End Date', 'Selling Title'])
     
     # To get impression for new data
-    imp_df = output[['Guarantee ID', 'P Q2 Imp', 'NP Q2 Imp']]
+    imp_df = output[['Guarantee ID', 'P Forecast Imp', 'NP Forecast Imp']]
     combined = pd.merge(combined, imp_df, on='Guarantee ID')
 
     imp = dict()
     for i, r in combined.iterrows():
         if r['Selling Title'] == 'P':
-            imp[(r['Guarantee ID'], 'P', r['Equiv Units'])] = r['P Q2 Imp'] * r['Equiv Units'] * 1000
+            imp[(r['Guarantee ID'], 'P', r['Equiv Units'])] = r['P Forecast Imp'] * r['Equiv Units'] * 1000
         else:
-            imp[(r['Guarantee ID'], 'NP', r['Equiv Units'])] = r['NP Q2 Imp'] * r['Equiv Units'] * 1000
+            imp[(r['Guarantee ID'], 'NP', r['Equiv Units'])] = r['NP Forecast Imp'] * r['Equiv Units'] * 1000
 
     ADU_E_D_I = pd.Series(imp).rename_axis(['Guarantee ID', 'Selling Title', 'Equiv Units']).reset_index(
         name='Primary Demo Equiv Post Imp')
@@ -1046,8 +1046,8 @@ def liability(new):
     # Sort the dataframe
     new['Week Start Date'] =  pd.to_datetime(new['Week Start Date'])
     new['Week End Date'] =  pd.to_datetime(new['Week End Date'])
-    df_sort = new.sort_values(['Guarantee ID', 'Week Start Date', 'Week End Date', 'Booked Dollars'],
-                              ascending=[True, True, True, False])
+    df_sort = new.sort_values(['Guarantee ID','In System', 'Week Start Date', 'Week End Date', 'Booked Dollars'],
+                              ascending=[True, False, True, True, False])
     Acc_Deal_Imp = set()
     Acc_Deal_Imp_list = []
     Acc_Delv_Imp = []
@@ -1148,6 +1148,13 @@ def liability(new):
 
     return df_sort
 
+def calc_units(liab, raw):
+    info = raw[1][['Guarantee ID', 'Total P Mix %', 'P Forecast Imp', 'NP Forecast Imp']]
+    liab_update = pd.merge(liab, info, how='left', on='Guarantee ID')
+    liab_update['Effective_ADU'] = liab_update['Owed_Imp']*liab_update['Total P Mix %']/liab_update['P Forecast Imp'] \
+                                + liab_update['Owed_Imp']*(1-liab_update['Total P Mix %'])/liab_update['NP Forecast Imp']
+    return liab_update
+
 def combine_demo(df):
     demos = df['Primary Demo'].unique().tolist()
     startpoint = ['2','6','9','12','15','18','21','25','30','35','40','45', '50','55','65']
@@ -1237,10 +1244,9 @@ def get_report_values(quarters, startdate, liab):
     quar = []
     for i in range(4):
         quar.append(str(report_q[i][1]) + ' ' + report_q[i][0] + 'Q')
-    table1 = pd.pivot_table(liab[liab['In System']=='Y'], index = 'Year + Quarter', columns = 'ADU Ind', values=['Owed_value', 'Owed_Imp', 'Equiv Units'], aggfunc=np.sum, fill_value=0, margins = True)
-    table2 = pd.pivot_table(liab, index = 'Year + Quarter', columns = ['ADU Ind'], values=['Owed_value', 'Owed_Imp', 'Equiv Units'], aggfunc=np.sum, fill_value=0, margins = True)
+    table1 = pd.pivot_table(liab[liab['In System']=='Y'], index = 'Year + Quarter', columns = 'ADU Ind', values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
+    table2 = pd.pivot_table(liab, index = 'Year + Quarter', columns = ['ADU Ind'], values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
 
-    rating = 310
     begin_liab = []
     begin_imp_owed = []
     begin_adu_req = []
@@ -1276,6 +1282,8 @@ def get_report_values(quarters, startdate, liab):
     owed_imp_spots = table1['Owed_Imp']['N'].tolist()
     owed_imp_adu = table1['Owed_Imp']['Y'].tolist()
     owed_imp_total = table1['Owed_Imp']['All'].tolist()
+    
+    effective_adu_total = table1['Effective_ADU']['All'].tolist()
 
     adu_units = table1['Equiv Units']['Y'].tolist()
 
@@ -1283,31 +1291,30 @@ def get_report_values(quarters, startdate, liab):
     owed_imp_adu_new = table2['Owed_Imp']['Y'].tolist()
     adu_units_new = table2['Equiv Units']['Y'].tolist()
 
-
     owed_v_total_new = table2['Owed_value']['All'].tolist()
     owed_imp_total_new = table2['Owed_Imp']['All'].tolist()
+    
+    effective_adu_total_new = table2['Effective_ADU']['All'].tolist()
 
     i = order.index(quar[0])
     for j in range(i, i+4):
         begin_liab.append(sum(owed_v_total[:j]))
         begin_imp_owed.append(sum(owed_imp_total[:j]))
-        begin_adu_req.append(sum(owed_imp_total[:j])/rating)
+        begin_adu_req.append(sum(effective_adu_total[:j]))
 
         ending_liab.append(sum(owed_v_total[:j+1]))
         ending_imp_owed.append(sum(owed_imp_total[:j+1]))
-        ending_adu_req.append(sum(owed_imp_total[:j+1])/rating)
+        ending_adu_req.append(sum(effective_adu_total[:j+1]))
         ending_liab_new.append(sum(owed_v_total_new[:j+1]))
         ending_imp_owed_new.append(sum(owed_imp_total_new[:j+1]))
-        ending_adu_req_new.append(sum(owed_imp_total_new[:j+1])/rating)
+        ending_adu_req_new.append(sum(effective_adu_total_new[:j+1]))
 
     for q in quar:
         i = order.index(q)
 
         cur_q_liab.append(owed_v_spots[i])
         cur_q_imp_owed.append(owed_imp_spots[i])
-        cur_q_adu_req.append(owed_imp_spots[i]/rating)
-
-
+        
         cur_q_liab_paid.append(owed_v_adu[i])
         cur_q_imp_paid.append(owed_imp_adu[i])
         cur_q_adu_given.append(adu_units[i])
@@ -1315,10 +1322,13 @@ def get_report_values(quarters, startdate, liab):
         cur_q_imp_paid_new.append(owed_imp_adu_new[i])
         cur_q_adu_given_new.append(adu_units_new[i])
 
+    for i in range(4):
+        cur_q_adu_req.append(ending_adu_req[i]-begin_adu_req[i]+cur_q_adu_given[i])
+
+        
     return (quar, (begin_liab, begin_imp_owed, begin_adu_req, cur_q_liab, cur_q_imp_owed , cur_q_adu_req, cur_q_liab_paid,\
 cur_q_imp_paid, cur_q_adu_given, cur_q_liab_paid_new, cur_q_imp_paid_new, cur_q_adu_given_new,\
 ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_new, ending_adu_req_new))
-
 
 def get_summary(report_values, date_string, quar):
 
@@ -1400,7 +1410,8 @@ def create_pivot():
 
     wb.Save()
     wb.Close(True)
-    Excel.Application.Quit()    
+    Excel.Application.Quit()   
+    return 
 
 
 
@@ -1430,7 +1441,7 @@ def main(Q_num = 2):
     print('Time for reading files: ', t2 - t1)
 
     print("Keep a copy of raw zip file")
-    copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
+    #copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
 
     print('Scheduling ADU and generating new data')
     raw = raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq)
@@ -1441,13 +1452,15 @@ def main(Q_num = 2):
 
     print('Calculating liability')
     liab = liability(new)
+    liab_update = calc_units(liab, raw)
+
     t4 = time.time()
     print('Time for computing liability: ', t4 - t3)
 
     print('Exporting ADU schedule file')
     sep = seperate(raw)
-    format_df(sep[0], liab, 'ADU Schedule')
-    format_take_back(sep[1], liab, 'ADU Take Back')
+    format_df(sep[0], liab_update, 'ADU Schedule')
+    format_take_back(sep[1], liab_update, 'ADU Take Back')
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
 
@@ -1457,7 +1470,7 @@ def main(Q_num = 2):
     print('Time for creating pivot table: ', t6-t5)
 
     print('Generating suammary')
-    quar, report_values = get_report_values(quarters, startdate, liab)
+    quar, report_values = get_report_values(quarters, startdate, liab_update)
     get_summary(report_values, date_string, quar)
     t7 = time.time()
     print('Time for generating summary: ', t7-t6)
