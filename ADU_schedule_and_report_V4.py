@@ -21,7 +21,7 @@ import win32com.client
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
+DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
@@ -634,6 +634,8 @@ def format_df(raw, new, name):
 
     # Autofilter
     worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 2) + str(count_row+7))
+    
+
 
     # Get the Sum
     for col in range(s[0] - 4, e[3] + 3):
@@ -847,7 +849,9 @@ def format_take_back(raw, new, name):
 
     # Autofilter
     worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 3) + str(count_row+6))
-
+    
+    worksheet.filter_column(xlsxwriter.utility.xl_col_to_name(e[-1] + 2), 'x > 0')
+   
     # Get the Sum
     for col in range(s[0] - 4, e[3] + 4):
         col = xlsxwriter.utility.xl_col_to_name(col)
@@ -1229,12 +1233,36 @@ def copy_rename(old_file_name, new_file_name):
 
 
 def seperate(raw):
-    df = raw[1]
+    df = raw[1].copy()
     pos = df[df['Total Imps Owed']>=0]
     gid = pos['Guarantee ID'].tolist()
+    df_p = raw[4].copy()
+    df_p['sum'] = df_p.select_dtypes(float).sum(1)
+    
+    df_np = raw[5].copy()
+    df_np['sum'] = df_np.select_dtypes(float).sum(1)
+    
+    P_take_back = df_p[df_p['sum']<0]
+    NP_take_back = df_np[df_np['sum']<0]
+    
+    P_gid = P_take_back['Guarantee ID'].tolist()
+    NP_gid = NP_take_back['Guarantee ID'].tolist()
+    
+    neg_gid = set(P_gid).union(set(NP_gid))
+    
+    sch = raw[0], pos, \
+        raw[2][raw[2]['Guarantee ID'].isin(gid)], \
+        raw[3][raw[3]['Guarantee ID'].isin(gid)], \
+        raw[4][raw[4]['Guarantee ID'].isin(gid)], \
+        raw[5][raw[5]['Guarantee ID'].isin(gid)]
 
-    sch = raw[0], pos, raw[2][raw[2]['Guarantee ID'].isin(gid)], raw[3][raw[3]['Guarantee ID'].isin(gid)], raw[4][raw[4]['Guarantee ID'].isin(gid)], raw[5][raw[5]['Guarantee ID'].isin(gid)]
-    takeback = raw[0], df[df['Total Imps Owed']<0], raw[2][~raw[2]['Guarantee ID'].isin(gid)], raw[3][~raw[3]['Guarantee ID'].isin(gid)], raw[4][~raw[4]['Guarantee ID'].isin(gid)], raw[5][~raw[5]['Guarantee ID'].isin(gid)]
+    takeback = raw[0],\
+        raw[1][raw[1]['Guarantee ID'].isin(neg_gid)], \
+        raw[2][raw[2]['Guarantee ID'].isin(neg_gid)], \
+        raw[3][raw[3]['Guarantee ID'].isin(neg_gid)], \
+        raw[4][raw[4]['Guarantee ID'].isin(neg_gid)], \
+        raw[5][raw[5]['Guarantee ID'].isin(neg_gid)]
+
     return sch, takeback
 
 
