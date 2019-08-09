@@ -1185,19 +1185,19 @@ def format_forecast_actual(all_ratings, four_q):
     
     fore_act_prev_p = xlsxwriter.utility.xl_col_to_name(e[-1]+2)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + forecast_prev_p + str(r) + '/' + actual_prev_p + str(r) +'}')   
+        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + actual_prev_p + str(r) + '/' + forecast_prev_p + str(r) +'}')   
           
     fore_act_prev_np = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + forecast_prev_np + str(r) +'/' + actual_prev_np + str(r) + '}')   
+        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + actual_prev_np + str(r) +'/' + forecast_prev_np + str(r) + '}')   
         
     fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + forecast_cur_p + str(r) +'/' + actual_cur_p +str(r) + '}')   
+        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + actual_cur_p + str(r) +'/' + forecast_cur_p +str(r) + '}')   
           
     fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+6)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + forecast_cur_np + str(r) + '/' + actual_cur_np + str(r) + '}')   
+        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + actual_cur_np + str(r) + '/' + forecast_cur_np + str(r) + '}')   
     
     new_col_s_letter = [fore_act_prev_p, fore_act_cur_p]
     new_col_e_letter = [fore_act_prev_np, fore_act_cur_np]
@@ -1241,10 +1241,10 @@ def format_forecast_actual(all_ratings, four_q):
         worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', cur_q + ' Actual', format_b)
         
         worksheet.merge_range(new_col_s_letter[0] + '4:' + new_col_e_letter[0] + '4', prev_q, format_g)
-        worksheet.merge_range(new_col_s_letter[0] + '5:' + new_col_e_letter[0] + '5', 'Forecast vs. Actual', format_g)
+        worksheet.merge_range(new_col_s_letter[0] + '5:' + new_col_e_letter[0] + '5', 'Actual vs. Forecast', format_g)
 
         worksheet.merge_range(new_col_s_letter[1] + '4:' + new_col_e_letter[1] + '4', cur_q , format_g)
-        worksheet.merge_range(new_col_s_letter[1] + '5:' + new_col_e_letter[1] + '5', ' Forecast vs. Actual', format_g)
+        worksheet.merge_range(new_col_s_letter[1] + '5:' + new_col_e_letter[1] + '5', 'Actual vs. Forecast', format_g)
  
     except:
         print('nope')
