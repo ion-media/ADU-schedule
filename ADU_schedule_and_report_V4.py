@@ -1878,6 +1878,9 @@ def combine_xlsx_files():
     print('Saving file')
     wb_comb.save()
     wb_comb.app.quit()
+    os.remove(f2)
+    os.remove(f3)
+    os.remove(f6)
     
     return
 
