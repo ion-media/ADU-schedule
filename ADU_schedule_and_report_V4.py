@@ -17,7 +17,10 @@ import xlsxwriter
 from pyxlsb import open_workbook as open_xlsb
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
+
 import win32com.client
+import xlwings as xw
+
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
@@ -441,14 +444,14 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
 
 #@df is the raw dealmake data
 #data_String: the data to start adu schdul
-def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq):
+def raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, endq):
    
     weeks = week_range(startq, endq)
 
-    # Read in Ratings
-    internal_estimates = pd.read_excel(ratings_file)
+    '''# Read in Ratings
+    internal_estimates = pd.read_csv(ratings_file)
     ratings = get_ratings(df, internal_estimates, int(four_q[1][0]))
-    
+    '''
     
     result = get_dict(df, ratings, endq)
     output = form_df(result)
@@ -478,14 +481,19 @@ def raw_result(df, quarters, date_string, startdate, ratings_file, four_q, start
 def format_df(raw, new, name):
     writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')
     workbook = writer.book
+    
+    # Set Font
+    workbook.formats[0].set_font_name('Arial')
+
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
     raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
-    new.to_excel(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Report.xlsx', index = False)
+    
+    new.to_excel(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Data.xlsx',sheet_name='Data', index = False)
 
     worksheet = writer.sheets[name]
-    
+
     # Clean the headers
     for col_num, value in enumerate(raw[1].columns.values):
         if col_num <= 7:
@@ -534,10 +542,12 @@ def format_df(raw, new, name):
             r) + '-' + Total_NP_ADU_col + str(r) + '}')
 
     # Header
-    bold = workbook.add_format({'bold': True})
+    bold = workbook.add_format({'bold': True, 
+                                'font_name': 'Arial'})
     worksheet.write(1, 1, 'ION Media', bold)
     worksheet.write(2, 1, 'ADU Trust 3.0', bold)
-    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue'})
+    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
+                                   'font_name': 'Arial'})
     worksheet.write(2, 2, raw[0], bold_blue)
 
     
@@ -546,22 +556,26 @@ def format_df(raw, new, name):
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#99CCFF'})
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
     format_o = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFCC99'})
+        'fg_color': '#FFCC99',
+        'font_name': 'Arial'})
     format_y = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFFFCC'})
+        'fg_color': '#FFFFCC',
+        'font_name': 'Arial'})
     format_g = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#C0C0C0'})  # grey
+        'fg_color': '#C0C0C0',
+        'font_name': 'Arial'})  # grey
 
     try:
         worksheet.merge_range('C4:I4', 'DEAL', format_g)
@@ -646,11 +660,14 @@ def format_df(raw, new, name):
     # Conditional format for date
     # Add a format. Light red fill with dark red text.
     format1 = workbook.add_format({'bg_color': '#FFC7CE',
-                                   'font_color': '#9C0006'})
+                                   'font_color': '#9C0006', 
+                                   'font_name': 'Arial'})
     # Add a format. Green fill with dark green text.
     format2 = workbook.add_format({'bg_color': '#C6EFCE',
-                                   'font_color': '#006100'})
-    format3 = workbook.add_format({'bg_color': 'white'})
+                                   'font_color': '#006100', 
+                                   'font_name': 'Arial'})
+    format3 = workbook.add_format({'bg_color': 'white', 
+                                   'font_name': 'Arial'})
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
@@ -672,9 +689,37 @@ def format_df(raw, new, name):
     # Column Width
     worksheet.set_column(s_letter[0] + ':' + e_letter[0], 15)
 
-    # freeze the top rows and left columns
+    # Freeze the top rows and left columns
     worksheet.freeze_panes(7, 11)
 
+    
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '0.00', 'font_name': 'Arial'})
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
+    
+    worksheet.set_column('N:R', None, fmt2)
+    worksheet.set_column('S:S', None, fmt1)
+    worksheet.set_column('T:X', None, fmt2)
+    worksheet.set_column('Y:Y', None, fmt1)
+    worksheet.set_column('Z:AD', None, fmt2)
+    worksheet.set_column('AE:AE', None, fmt1)
+    worksheet.set_column('AF:AJ', None, fmt2)
+    worksheet.set_column('AK:AK', None, fmt1)
+    worksheet.set_column('AL:AN', None, fmt2)
+    worksheet.set_column('AO:AO', None, fmt3)    
+    worksheet.set_column('AP:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt1)
+    worksheet.set_column('AS:AS', None, fmt2)
+    worksheet.set_column('AT:AU', None, fmt3)
+    worksheet.set_column('AV:AY', None, fmt2)
+    worksheet.set_column('AZ:BA', None, fmt3)
+    worksheet.set_column('BB:BC', None, fmt2)
+    worksheet.set_column('BD:BF', None, fmt4)
+    worksheet.set_column('BH:FL', None, fmt4)
+    
+    
     writer.save()
     return s, s_letter, e_letter
 
@@ -684,6 +729,9 @@ def format_take_back(raw, new, name):
     writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
     workbook = writer.book
 
+    # Set Font
+    workbook.formats[0].set_font_name('Arial')    
+    
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
     raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
@@ -744,10 +792,12 @@ def format_take_back(raw, new, name):
 
 
     # Header
-    bold = workbook.add_format({'bold': True})
+    bold = workbook.add_format({'bold': True, 
+                                'font_name': 'Arial'})
     worksheet.write(1, 1, 'ION Media', bold)
     worksheet.write(2, 1, 'ADU Trust 3.0', bold)
-    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue'})
+    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
+                                   'font_name': 'Arial'})
     worksheet.write(2, 2, raw[0], bold_blue)
 
     
@@ -756,22 +806,26 @@ def format_take_back(raw, new, name):
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#99CCFF'})
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
     format_o = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFCC99'})
+        'fg_color': '#FFCC99', 
+        'font_name': 'Arial'})
     format_y = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFFFCC'})
+        'fg_color': '#FFFFCC', 
+        'font_name': 'Arial'})
     format_g = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#C0C0C0'})  # grey
+        'fg_color': '#C0C0C0', 
+        'font_name': 'Arial'})  # grey
 
     try:
         worksheet.merge_range('C4:I4', 'DEAL', format_g)
@@ -861,11 +915,14 @@ def format_take_back(raw, new, name):
     # Conditional format for date
     # Add a format. Light red fill with dark red text.
     format1 = workbook.add_format({'bg_color': '#FFC7CE',
-                                   'font_color': '#9C0006'})
+                                   'font_color': '#9C0006', 
+                                    'font_name': 'Arial'})
     # Add a format. Green fill with dark green text.
     format2 = workbook.add_format({'bg_color': '#C6EFCE',
-                                   'font_color': '#006100'})
-    format3 = workbook.add_format({'bg_color': 'white'})
+                                   'font_color': '#006100', 
+                                    'font_name': 'Arial'})
+    format3 = workbook.add_format({'bg_color': 'white', 
+                                    'font_name': 'Arial'})
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
@@ -889,6 +946,34 @@ def format_take_back(raw, new, name):
 
     # freeze the top rows and left columns
     worksheet.freeze_panes(7, 11)
+    
+
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '0.00', 'font_name': 'Arial'})
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
+    
+    worksheet.set_column('N:R', None, fmt2)
+    worksheet.set_column('S:S', None, fmt1)
+    worksheet.set_column('T:X', None, fmt2)
+    worksheet.set_column('Y:Y', None, fmt1)
+    worksheet.set_column('Z:AD', None, fmt2)
+    worksheet.set_column('AE:AE', None, fmt1)
+    worksheet.set_column('AF:AJ', None, fmt2)
+    worksheet.set_column('AK:AK', None, fmt1)
+    worksheet.set_column('AL:AN', None, fmt2)
+    worksheet.set_column('AO:AO', None, fmt3)    
+    worksheet.set_column('AP:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt1)
+    worksheet.set_column('AS:AS', None, fmt2)
+    worksheet.set_column('AT:AU', None, fmt3)
+    worksheet.set_column('AV:AY', None, fmt2)
+    worksheet.set_column('AZ:BA', None, fmt3)
+    worksheet.set_column('BB:BC', None, fmt2)
+    worksheet.set_column('BD:BF', None, fmt4)
+    worksheet.set_column('BH:FL', None, fmt4)
+    
 
     writer.save()
     return s, s_letter, e_letter
@@ -897,6 +982,9 @@ def format_take_back(raw, new, name):
 def format_cur_standing(raw, new, name):
     writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')
     workbook = writer.book
+    
+    # Set Font
+    workbook.formats[0].set_font_name('Arial')
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
@@ -922,14 +1010,14 @@ def format_cur_standing(raw, new, name):
         s_letter.append(xlsxwriter.utility.xl_col_to_name(s[i]))
         e_letter.append(xlsxwriter.utility.xl_col_to_name(e[i]))
 
-    print(s,e,s_letter,e_letter)
-    
     
     # Header
-    bold = workbook.add_format({'bold': True})
+    bold = workbook.add_format({'bold': True, 
+                                'font_name': 'Arial'})
     worksheet.write(1, 1, 'ION Media', bold)
     worksheet.write(2, 1, 'ADU Trust 3.0', bold)
-    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue'})
+    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
+                                'font_name': 'Arial'})
     worksheet.write(2, 2, raw[0], bold_blue)
 
     
@@ -938,22 +1026,26 @@ def format_cur_standing(raw, new, name):
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#99CCFF'})
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
     format_o = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFCC99'})
+        'fg_color': '#FFCC99', 
+        'font_name': 'Arial'})
     format_y = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#FFFFCC'})
+        'fg_color': '#FFFFCC', 
+        'font_name': 'Arial'})
     format_g = workbook.add_format({
         'bold': 1,
         'align': 'left',
         'valign': 'vcenter',
-        'fg_color': '#C0C0C0'})  # grey
+        'fg_color': '#C0C0C0', 
+        'font_name': 'Arial'})  # grey
 
     try:
         worksheet.merge_range('C4:I4', 'DEAL', format_g)
@@ -1018,9 +1110,181 @@ def format_cur_standing(raw, new, name):
     # freeze the top rows and left columns
     worksheet.freeze_panes(7, 11)
 
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '0.00', 'font_name': 'Arial'})
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
+    
+    worksheet.set_column('N:R', None, fmt2)
+    worksheet.set_column('S:S', None, fmt1)
+    worksheet.set_column('T:X', None, fmt2)
+    worksheet.set_column('Y:Y', None, fmt1)
+    worksheet.set_column('Z:AD', None, fmt2)
+    worksheet.set_column('AE:AE', None, fmt1)
+    worksheet.set_column('AF:AJ', None, fmt2)
+    worksheet.set_column('AK:AK', None, fmt1)
+    worksheet.set_column('AL:AN', None, fmt2)
+    worksheet.set_column('AO:AO', None, fmt3)    
+    worksheet.set_column('AP:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt1)
+    worksheet.set_column('AS:AS', None, fmt2)
+    worksheet.set_column('AT:AU', None, fmt3)
+    worksheet.set_column('AV:AY', None, fmt2)
+    worksheet.set_column('AZ:BA', None, fmt3)
+    worksheet.set_column('BB:BC', None, fmt2)
+    worksheet.set_column('BD:BF', None, fmt4)
+    worksheet.set_column('BH:FL', None, fmt4)
+        
+    
     writer.save()
     return s, s_letter, e_letter
 
+
+def format_forecast_actual(all_ratings, four_q):
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Forecast_Actual.xlsx', engine='xlsxwriter')
+    workbook = writer.book
+    
+    # Set Font
+    workbook.formats[0].set_font_name('Arial')
+    
+    count_row = all_ratings[1].shape[0] + 1  # gives number of row count
+    count_col = all_ratings[1].shape[1] + 3  # gives number of col count
+    all_ratings[0].to_excel(writer, sheet_name='Forecast_Actual', startrow=5, startcol=2, header=True, index = False)
+
+    worksheet = writer.sheets['Forecast_Actual']
+
+    s = [2] # stores the start column of each dataframe
+    e = [4] # stores the end column of each dataframe
+    for i in range(1, len(all_ratings)):
+        all_ratings[i].to_excel(writer, sheet_name='Forecast_Actual', startrow=5, startcol=count_col, header=True, index = False)
+        s.append(count_col)
+        for r in range(count_row):
+            for c in range(count_col, count_col):
+                worksheet.write_blank(r, c, None)
+
+        count_col += all_ratings[i].shape[1]+1
+        e.append(count_col - 2)
+    s_letter = [] #start column letter of each dataframe
+    e_letter = [] #end column letter of each dataframe
+    for i in range(len(s)):
+        s_letter.append(xlsxwriter.utility.xl_col_to_name(s[i]))
+        e_letter.append(xlsxwriter.utility.xl_col_to_name(e[i]))
+
+    # Forecast vs Actual
+    
+    forecast_prev_p = xlsxwriter.utility.xl_col_to_name(s[0]+1)
+    forecast_prev_np = xlsxwriter.utility.xl_col_to_name(s[0]+2)
+    forecast_cur_p = xlsxwriter.utility.xl_col_to_name(s[1]+1)
+    forecast_cur_np = xlsxwriter.utility.xl_col_to_name(s[1]+2)
+    actual_prev_p = xlsxwriter.utility.xl_col_to_name(s[3]+1)
+    actual_prev_np = xlsxwriter.utility.xl_col_to_name(s[3]+2)
+    actual_cur_p = xlsxwriter.utility.xl_col_to_name(s[4]+1)
+    actual_cur_np = xlsxwriter.utility.xl_col_to_name(s[4]+2)    
+    
+    
+    fore_act_prev_p = xlsxwriter.utility.xl_col_to_name(e[-1]+2)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + forecast_prev_p + str(r) + '/' + actual_prev_p + str(r) +'}')   
+          
+    fore_act_prev_np = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + forecast_prev_np + str(r) +'/' + actual_prev_np + str(r) + '}')   
+        
+    fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + forecast_cur_p + str(r) +'/' + actual_cur_p +str(r) + '}')   
+          
+    fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+6)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + forecast_cur_np + str(r) + '/' + actual_cur_np + str(r) + '}')   
+    
+    new_col_s_letter = [fore_act_prev_p, fore_act_cur_p]
+    new_col_e_letter = [fore_act_prev_np, fore_act_cur_np]
+    
+    
+    prev_q = 'Q' + str(four_q[0][0]) + ' ' + str(four_q[0][1])
+    cur_q = 'Q' + str(four_q[1][0]) + ' ' + str(four_q[1][1])
+    next_q = 'Q' + str(four_q[2][0]) + ' ' + str(four_q[2][1])
+
+    # Add Title & Merge
+    format_b = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
+    format_o = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFCC99',
+        'font_name': 'Arial'})
+    format_y = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFFFCC',
+        'font_name': 'Arial'})
+    format_g = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#C0C0C0',
+        'font_name': 'Arial'})  # grey
+
+    try:
+        worksheet.merge_range(s_letter[0] + '4:' + e_letter[0] + '4', prev_q + ' Forecast', format_o)
+        worksheet.merge_range(s_letter[1] + '4:' + e_letter[1] + '4', cur_q + ' Forecast', format_o)
+        worksheet.merge_range(s_letter[2] + '4:' + e_letter[2] + '4', next_q + ' Forecast', format_o)
+        worksheet.merge_range(s_letter[3] + '4:' + e_letter[3] + '4', prev_q + ' Actual', format_b)
+        worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', cur_q + ' Actual', format_b)
+        
+        worksheet.merge_range(new_col_s_letter[0] + '4:' + new_col_e_letter[0] + '4', prev_q, format_g)
+        worksheet.merge_range(new_col_s_letter[0] + '5:' + new_col_e_letter[0] + '5', 'Forecast vs. Actual', format_g)
+
+        worksheet.merge_range(new_col_s_letter[1] + '4:' + new_col_e_letter[1] + '4', cur_q , format_g)
+        worksheet.merge_range(new_col_s_letter[1] + '5:' + new_col_e_letter[1] + '5', ' Forecast vs. Actual', format_g)
+ 
+    except:
+        print('nope')
+    
+    # Formatting Titles
+    for i in range(s[0], e[-1]+7):
+        if i <= e[2]:
+            if i%4!=1:
+                worksheet.write(4, i, '', format_o)
+            
+            if i%4 == 2:
+                worksheet.write(5, i, 'Demo', format_o)
+            elif i%4 == 3:
+                worksheet.write(5, i, 'P Imp', format_o)
+            elif i%4 == 0:
+                worksheet.write(5, i, 'NP Imp', format_o)
+                
+        elif i<=e[-1]:
+            if i%4!=1:
+                worksheet.write(4, i, '', format_b)
+            
+            if i%4 == 2:
+                worksheet.write(5, i, 'Demo', format_b)
+            elif i%4 == 3:
+                worksheet.write(5, i, 'P Imp', format_b)
+            elif i%4 == 0:
+                worksheet.write(5, i, 'NP Imp', format_b)
+        else: 
+            if i%3 == 1:
+                worksheet.write(5, i, 'P Imp', format_g)
+            elif i%3 == 2:
+                worksheet.write(5, i, 'NP Imp', format_g)
+    
+    # Format number
+    fmt1 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    worksheet.set_column(new_col_s_letter[0]+':'+new_col_e_letter[-1], None, fmt1)
+    
+    
+    writer.save()
+    return s, s_letter, e_letter
 
 
 
@@ -1321,9 +1585,9 @@ def combine_demo(df):
                         demo_dic[d].append('M' + demo_list[i])
     return demo_dic
 
-def get_ratings(df, internal_estimates, cur_q):
-    estimates_NP = internal_estimates.loc[(internal_estimates['Selling Title'] == 'MSU7A7P1A3A') & (internal_estimates['Quarter'] ==cur_q )]
-    estimates_P = internal_estimates.loc[(internal_estimates['Selling Title'] == 'MSU7p1a')& (internal_estimates['Quarter'] ==cur_q)]
+def get_ratings(df, internal_estimates, cur_q, cur_y):
+    estimates_NP = internal_estimates.loc[(internal_estimates['Selling Title'] == 'MSU7A7P1A3A') & (internal_estimates['Quarter'] ==cur_q ) & (internal_estimates['Year'] ==cur_y )]
+    estimates_P = internal_estimates.loc[(internal_estimates['Selling Title'] == 'MSU7p1a')& (internal_estimates['Quarter'] ==cur_q) & (internal_estimates['Year'] ==cur_y )]
     demo_dic = combine_demo(df)
     
     demo_ratings_P = dict()
@@ -1489,7 +1753,7 @@ ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_n
 def get_summary(report_values, date_string, quar):
 
     wb = load_workbook(filename = DIR_OUTPUT + 'Summary.xlsx')
-    ws = wb["Sheet1"]
+    ws = wb["Summary"]
    
     row_start = ws.max_row + 3
     
@@ -1534,15 +1798,16 @@ def create_pivot():
     Excel = win32com.client.gencache.EnsureDispatch('Excel.Application') # Excel = win32com.client.Dispatch('Excel.Application')
     win32c = win32com.client.constants
 
-    wb =Excel.Workbooks.Open(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Report.xlsx')
-    Sheet1 = wb.Worksheets("Sheet1")
+    wb =Excel.Workbooks.Open(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Data.xlsx')
+    Sheet1 = wb.Worksheets("Data")
 
     PivotSourceRange = Sheet1.UsedRange
 
     PivotSourceRange.Select()
 
-    wb.Sheets.Add (After=wb.Sheets("Sheet1"))
+    wb.Sheets.Add (After=wb.Sheets("Data"))
     Sheet2 = wb.Worksheets(2)
+    Sheet2.Name = 'Pivot Table'
     cl3=Sheet2.Cells(1,1)
     PivotTargetRange=  Sheet2.Range(cl3,cl3)
     PivotTableName = 'ReportPivotTable'
@@ -1570,6 +1835,64 @@ def create_pivot():
     return 
 
 
+def combine_xlsx_files():
+    
+    f1 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Schedule.xlsx'
+    f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Take Back.xlsx'
+    f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Current Standing.xlsx'
+    f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
+    f5 = DIR_OUTPUT + 'Summary.xlsx'
+    f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Forecast_Actual.xlsx'
+    
+    print('Combining ADU schedule')
+    wb_comb = xw.Book(f1)
+    wb1 = xw.Book(f5)
+    ws1 = wb1.sheets('Summary')
+    ws1.api.Copy(Before=wb_comb.sheets("ADU Schedule").api)
+    wb1.close()
+    
+    print('Combining ADU take back')
+    wb2 = xw.Book(f2)
+    ws2 = wb2.sheets('ADU Take Back')
+    ws2.api.Copy(After=wb_comb.sheets("ADU Schedule").api)
+    wb2.close()
+
+    print('Combining deal current standing')
+    wb3 = xw.Book(f3)
+    ws3 = wb3.sheets('Deal Current Standing')
+    ws3.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
+    wb3.close()
+    
+    print('Combining pivot')
+    wb4 = xw.Book(f4)
+    ws4 = wb4.sheets("Pivot Table")
+    ws4.api.Copy(After=wb_comb.sheets("Deal Current Standing").api)
+    wb4.close()
+    
+    print('Combining Forecast_Actual')
+    wb5 = xw.Book(f6)
+    ws5 = wb5.sheets("Forecast_Actual")
+    ws5.api.Copy(After=wb_comb.sheets("Deal Current Standing").api)
+    wb5.close()
+    
+    print('Saving file')
+    wb_comb.save()
+    wb_comb.app.quit()
+    
+    return
+
+
+def forecast_actual(df, internal_estimates, four_q):
+    C3_file = DIR_INPUT+'Quarterly C3 rating.csv'
+    C3_rating = pd.read_csv(C3_file)
+    actual_prev = get_ratings(df, C3_rating, int(four_q[0][0]), int(four_q[0][1]))
+    actual_cur = get_ratings(df, C3_rating, int(four_q[1][0]), int(four_q[1][1]))
+    
+    forecast_prev = get_ratings(df, internal_estimates, int(four_q[0][0]), int(four_q[0][1]))
+    forecast_cur = get_ratings(df, internal_estimates, int(four_q[1][0]), int(four_q[1][1]))
+    forecast_next = get_ratings(df, internal_estimates, int(four_q[2][0]), int(four_q[2][1]))
+    return forecast_prev, forecast_cur, forecast_next, actual_prev, actual_cur
+
 
 def main(Q_num = 2):
     print("Reading Data")
@@ -1583,7 +1906,6 @@ def main(Q_num = 2):
     date = datetime.now()+ dt.timedelta(days=7)
     date_string = str(date.strftime("%m/%d/%Y"))
     startdate = datetime.strptime(date_string, '%m/%d/%Y')
-    ratings_file = DIR_INPUT+'2019-07-17 ION Q3 & Q4 Internal Estimates.xlsx'    
     
     quarters = pd.read_csv(DIR_INPUT+'timeList.csv')
     quarters['start_date'] = pd.to_datetime(quarters['start_date']).dt.strftime('%m/%d/%Y')
@@ -1593,6 +1915,10 @@ def main(Q_num = 2):
     startq = quarter_sd[1] #schedule start date
     endq = quarter_sd[1 + Q_num] # schedule end date
   
+    # Read in Ratings
+    ratings_file = DIR_INPUT+'Quarterly Internal Estimates.csv'    
+    internal_estimates = pd.read_csv(ratings_file)
+    ratings = get_ratings(df, internal_estimates, int(four_q[1][0]), int(four_q[1][1]))
     t2 = time.time()
     print('Time for reading files: ', t2 - t1)
 
@@ -1600,7 +1926,7 @@ def main(Q_num = 2):
     #copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
 
     print('Scheduling ADU and generating new data')
-    raw = raw_result(df, quarters, date_string, startdate, ratings_file, four_q, startq, endq)
+    raw = raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, endq)
     general = new_data(raw, quarters)
     new = newdata_to_df(df, general, raw[1])
     t3 = time.time()
@@ -1627,16 +1953,22 @@ def main(Q_num = 2):
     t6 = time.time()
     print('Time for creating pivot table: ', t6-t5)
 
-    print('Generating suammary')
+    print('Generating summary')
     quar, report_values = get_report_values(quarters, startdate, liab_update)
     get_summary(report_values, date_string, quar)
     t7 = time.time()
     print('Time for generating summary: ', t7-t6)
     
+    print('Comparing forcast and actual ratings')
+    all_ratings = forecast_actual(df, internal_estimates, four_q)
+    format_forecast_actual(all_ratings, four_q)
+    t8 = time.time()
+    print('Time for comparing forcast and actual ratings: ', t8-t7)
+    
+    combine_xlsx_files()
     print('Done')
 
-    print('Total Time: ', t7 - t1)
+    print('Total Time: ', t8 - t1)
     return
-
 
 main()
