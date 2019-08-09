@@ -24,7 +24,7 @@ import xlwings as xw
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
@@ -1752,7 +1752,7 @@ ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_n
 
 def get_summary(report_values, date_string, quar):
 
-    wb = load_workbook(filename = DIR_OUTPUT + 'Summary.xlsx')
+    wb = load_workbook(filename = DIR_INPUT + 'Summary.xlsx')
     ws = wb["Summary"]
    
     row_start = ws.max_row + 3
@@ -1791,7 +1791,7 @@ def get_summary(report_values, date_string, quar):
     ws.column_dimensions.group(start='V', end='X', hidden=True)
 
     
-    wb.save(DIR_OUTPUT+'Summary.xlsx')
+    wb.save(DIR_INPUT+'Summary.xlsx')
     return
 
 def create_pivot():
@@ -1841,7 +1841,7 @@ def combine_xlsx_files():
     f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Take Back.xlsx'
     f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Current Standing.xlsx'
     f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
-    f5 = DIR_OUTPUT + 'Summary.xlsx'
+    f5 = DIR_INPUT + 'Summary.xlsx'
     f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Forecast_Actual.xlsx'
     
     print('Combining ADU schedule')
