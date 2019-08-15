@@ -24,7 +24,6 @@ import xlwings as xw
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
@@ -1142,7 +1141,7 @@ def format_cur_standing(raw, new, name):
 
 
 def format_forecast_actual(all_ratings, four_q):
-    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Forecast_Actual.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Ratings Summary.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
     # Set Font
@@ -1150,14 +1149,14 @@ def format_forecast_actual(all_ratings, four_q):
     
     count_row = all_ratings[1].shape[0] + 1  # gives number of row count
     count_col = all_ratings[1].shape[1] + 3  # gives number of col count
-    all_ratings[0].to_excel(writer, sheet_name='Forecast_Actual', startrow=5, startcol=2, header=True, index = False)
+    all_ratings[0].to_excel(writer, sheet_name='Ratings Summary', startrow=5, startcol=2, header=True, index = False)
 
-    worksheet = writer.sheets['Forecast_Actual']
+    worksheet = writer.sheets['Ratings Summary']
 
     s = [2] # stores the start column of each dataframe
     e = [4] # stores the end column of each dataframe
     for i in range(1, len(all_ratings)):
-        all_ratings[i].to_excel(writer, sheet_name='Forecast_Actual', startrow=5, startcol=count_col, header=True, index = False)
+        all_ratings[i].to_excel(writer, sheet_name='Ratings Summary', startrow=5, startcol=count_col, header=True, index = False)
         s.append(count_col)
         for r in range(count_row):
             for c in range(count_col, count_col):
@@ -1190,17 +1189,36 @@ def format_forecast_actual(all_ratings, four_q):
     fore_act_prev_np = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
     for r in range(7, count_row+6):
         worksheet.write_formula(fore_act_prev_np + str(r),'{=' + actual_prev_np + str(r) +'/' + forecast_prev_np + str(r) + '}')   
+
+    fore_act_prev_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+4)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_prev_p_delta + str(r),'{=' + actual_prev_p + str(r) + '-' + forecast_prev_p + str(r) +'}')   
+          
+    fore_act_prev_np_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_prev_np_delta + str(r),'{=' + actual_prev_np + str(r) +'-' + forecast_prev_np + str(r) + '}') 
         
-    fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
+        
+        
+    fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+7)
     for r in range(7, count_row+6):
         worksheet.write_formula(fore_act_cur_p + str(r),'{=' + actual_cur_p + str(r) +'/' + forecast_cur_p +str(r) + '}')   
           
-    fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+6)
+    fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+8)
     for r in range(7, count_row+6):
         worksheet.write_formula(fore_act_cur_np + str(r),'{=' + actual_cur_np + str(r) + '/' + forecast_cur_np + str(r) + '}')   
+
+    fore_act_cur_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+9)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_cur_p_delta + str(r),'{=' + actual_cur_p + str(r) +'-' + forecast_cur_p +str(r) + '}')   
+          
+    fore_act_cur_np_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+10)
+    for r in range(7, count_row+6):
+        worksheet.write_formula(fore_act_cur_np_delta + str(r),'{=' + actual_cur_np + str(r) + '-' + forecast_cur_np + str(r) + '}')   
+    
     
     new_col_s_letter = [fore_act_prev_p, fore_act_cur_p]
-    new_col_e_letter = [fore_act_prev_np, fore_act_cur_np]
+    new_col_e_letter = [fore_act_prev_np_delta, fore_act_cur_np_delta]
     
     
     prev_q = 'Q' + str(four_q[0][0]) + ' ' + str(four_q[0][1])
@@ -1250,7 +1268,7 @@ def format_forecast_actual(all_ratings, four_q):
         print('nope')
     
     # Formatting Titles
-    for i in range(s[0], e[-1]+7):
+    for i in range(s[0], e[-1]+11):
         if i <= e[2]:
             if i%4!=1:
                 worksheet.write(4, i, '', format_o)
@@ -1273,15 +1291,25 @@ def format_forecast_actual(all_ratings, four_q):
             elif i%4 == 0:
                 worksheet.write(5, i, 'NP Imp', format_b)
         else: 
-            if i%3 == 1:
+            if i%5 == 2:
                 worksheet.write(5, i, 'P Imp', format_g)
-            elif i%3 == 2:
+            elif i%5 == 3:
                 worksheet.write(5, i, 'NP Imp', format_g)
-    
+            elif i%5 == 4:
+                worksheet.write(5, i, 'P Imp Delta', format_g)
+            elif i%5 == 0:
+                worksheet.write(5, i, 'NP Imp Delta', format_g)
+
+                
     # Format number
     fmt1 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
-    worksheet.set_column(new_col_s_letter[0]+':'+new_col_e_letter[-1], None, fmt1)
+    worksheet.set_column(new_col_s_letter[0] + ':' + new_col_e_letter[-1], None, fmt1)
     
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    worksheet.set_column(s_letter[0] + ':' + e_letter[-1], None, fmt2)
+    worksheet.set_column(fore_act_prev_p_delta + ':' + fore_act_prev_np_delta, None, fmt2)
+    worksheet.set_column(fore_act_cur_p_delta + ':' + fore_act_cur_np_delta, None, fmt2)
+
     
     writer.save()
     return s, s_letter, e_letter
@@ -1750,6 +1778,7 @@ def get_report_values(quarters, startdate, liab):
 cur_q_imp_paid, cur_q_adu_given, cur_q_liab_paid_new, cur_q_imp_paid_new, cur_q_adu_given_new,\
 ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_new, ending_adu_req_new))
 
+
 def get_summary(report_values, date_string, quar):
 
     wb = load_workbook(filename = DIR_INPUT + 'Summary.xlsx')
@@ -1759,11 +1788,12 @@ def get_summary(report_values, date_string, quar):
     
     # write date and year+quarter  
     ws.cell(row_start, 2).value = date_string
-    ws.cell(row_start, 2).font = Font(bold=True, color=colors.RED)
+    ws.cell(row_start, 2).font = Font(bold=True, color=colors.RED, name = 'Arial')
     ws.cell(row_start, 2).fill = PatternFill("solid", fgColor=colors.YELLOW)
     
     for i in range(2, 6):
         ws.cell(row_start+i, 2).value = quar[i-2]
+        ws.cell(row_start+i, 2).font = Font(name = 'Arial')
     
     # headers
     h1 = ['Qtr Begin', 'Qtr Begin', 'Qtr Begin', 'Current Qtr', 'Current Qtr', 'Current Qtr', \
@@ -1779,24 +1809,27 @@ def get_summary(report_values, date_string, quar):
             pass
         else:
             ws.cell(row_start, col_i).value = h1[val_i]
-            ws.cell(row_start, col_i).font = Font(bold=True, underline="single")
+            ws.cell(row_start, col_i).font = Font(bold=True, underline="single", name = 'Arial')
             ws.cell(row_start+1, col_i).value = h2[val_i]
-            ws.cell(row_start+1, col_i).font = Font(bold=True, underline="single")
+            ws.cell(row_start+1, col_i).font = Font(bold=True, underline="single", name = 'Arial')
         
             for r in range(row_start+2, row_start+6):
                 ws.cell(r, col_i).value = report_values[val_i][r-row_start-2]
+                ws.cell(r, col_i).font = Font(name = 'Arial')
+                ws.cell(r, col_i).number_format = '#,##0'
             val_i += 1
     
     ws.column_dimensions.group(start='O', end='Q', hidden=True)
     ws.column_dimensions.group(start='V', end='X', hidden=True)
 
-    
     wb.save(DIR_INPUT+'Summary.xlsx')
     return
+
 
 def create_pivot():
     Excel = win32com.client.gencache.EnsureDispatch('Excel.Application') # Excel = win32com.client.Dispatch('Excel.Application')
     win32c = win32com.client.constants
+    Excel.Visible = 0
 
     wb =Excel.Workbooks.Open(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Data.xlsx')
     Sheet1 = wb.Worksheets("Data")
@@ -1829,11 +1862,22 @@ def create_pivot():
     PivotTable.PivotFields('Owed_Imp').Orientation = win32c.xlDataField
     PivotTable.PivotFields('Owed_value').Orientation = win32c.xlDataField
 
+    
+    # format
+    
+    ws = wb.Worksheets('Pivot Table')
+    Sheet2.UsedRange.Font.Name = 'Arial'
+    Sheet2.UsedRange.Font.Size = 10
+    Sheet2.UsedRange.NumberFormat = "#,##0"
+    
+    PivotTable.InGridDropZones = True
+    #Sheet2.PivotTables('ReportPivotTable').RowAxisLayout(win32c.xlTabularRow)
+    PivotTable.RowAxisLayout(win32c.xlTabularRow)
+    
     wb.Save()
     wb.Close(True)
     Excel.Application.Quit()   
     return 
-
 
 def combine_xlsx_files():
     
@@ -1842,7 +1886,7 @@ def combine_xlsx_files():
     f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Current Standing.xlsx'
     f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
     f5 = DIR_INPUT + 'Summary.xlsx'
-    f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Forecast_Actual.xlsx'
+    f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
     
     print('Combining ADU schedule')
     wb_comb = xw.Book(f1)
@@ -1860,19 +1904,19 @@ def combine_xlsx_files():
     print('Combining deal current standing')
     wb3 = xw.Book(f3)
     ws3 = wb3.sheets('Deal Current Standing')
-    ws3.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
+    ws3.api.Copy(After=wb_comb.sheets("Summary").api)
     wb3.close()
     
     print('Combining pivot')
     wb4 = xw.Book(f4)
     ws4 = wb4.sheets("Pivot Table")
-    ws4.api.Copy(After=wb_comb.sheets("Deal Current Standing").api)
+    ws4.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
     wb4.close()
     
-    print('Combining Forecast_Actual')
+    print('Combining Ratings Summary')
     wb5 = xw.Book(f6)
-    ws5 = wb5.sheets("Forecast_Actual")
-    ws5.api.Copy(After=wb_comb.sheets("Deal Current Standing").api)
+    ws5 = wb5.sheets("Ratings Summary")
+    ws5.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
     wb5.close()
     
     print('Saving file')
