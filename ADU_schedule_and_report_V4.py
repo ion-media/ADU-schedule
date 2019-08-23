@@ -28,8 +28,9 @@ from openpyxl.utils import get_column_letter
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
+DIR_REPORT='//ion.media/shared/1 Commercial/! IM 3.0/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
@@ -2096,6 +2097,13 @@ def combine_xlsx_files():
     
     return
 
+def copy_to_reports():
+    file_names = [fn for fn in os.listdir(DIR_REPORT) if fn.startswith('YM -- 1 ION ADU 3.0 (Arjun) -- ')]
+    for fn in file_names:
+        os.remove(DIR_REPORT+fn)
+    filename='YM -- 1 ION ADU 3.0 (Arjun) -- ' + str(datetime.now().strftime("%Y-%m-%d")) + '.xlsx'
+    shutil.copy(DIR_OUTPUT + filename,DIR_REPORT + filename )
+
 
 def forecast_actual(df, internal_estimates, four_q):
     C3_file = DIR_INPUT+'Quarterly C3 rating.csv'
@@ -2184,6 +2192,7 @@ def main(Q_num = 2):
     combine_xlsx_files()
     print('Done')
 
+    #copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
 
