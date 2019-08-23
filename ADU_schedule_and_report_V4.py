@@ -15,11 +15,15 @@ from datetime import datetime
 
 import xlsxwriter
 from pyxlsb import open_workbook as open_xlsb
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
-
 import win32com.client
 import xlwings as xw
+
+import openpyxl
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font, colors
+from openpyxl.utils import get_column_letter
+
+
 
 
 # Global parameter
@@ -86,6 +90,7 @@ class GID:
         self.SoldDemo = self.row['Primary Demo']
         self.StartDate = self.row['Week Start Date']
         self.EndDate = self.row['Week End Date']
+        self.DealYear = self.row['Deal Year']
 
         # forecast ratings
         try:
@@ -166,7 +171,7 @@ class GID:
 
     def GID_to_List(self):
         return [self.GName, self.DealNum, self.Marketplace, self.Advertiser, \
-             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate] \
+             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate, self.DealYear] \
              + [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
 
 
@@ -191,7 +196,7 @@ def get_dict(df, ratings, endq):
 def form_df(result):
     column_names = ['Guarantee ID', 'Guarantee Name', 'Deal ID', 'Marketplace',\
                     'Advertiser', \
-                    'AE Name', 'Agency', 'Deal Name', 'Primary Demo', 'Sold Start Date', 'Sold End Date', \
+                    'AE Name', 'Agency', 'Deal Name', 'Primary Demo', 'Sold Start Date', 'Sold End Date', 'Deal Year',\
                     'Sold Prime Booked $', 'Sold Prime Deal Imp', 'Sold Prime Delv Imp', 'Sold Prime Imps Owed',
                     'Sold Prime Units', \
                     'Sold Prime CPM', 'Sold NP Booked $', 'Sold NP Deal Imp', 'Sold NP Delv Imp', 'Sold NP Imps Owed', \
@@ -210,7 +215,10 @@ def form_df(result):
         for element in v.GID_to_List():
             if type(element) is set:
                 element = list(element)
-                row.append(','.join(str(e) for e in element))
+                s = ','.join(str(e) for e in element)
+                if len(s)>200:
+                    s = s[:200] + '...'
+                row.append(s)
             elif type(element) is dict:
                 if len(element) == 6:
                     for key in ['Booked $', 'Deal Imp', 'Delv Imp', 'Imps Owed', 'Units', 'CPM']:
@@ -228,9 +236,9 @@ def form_df(result):
         rows.append(row)
     output = pd.DataFrame(rows)
     output.columns = column_names
-    output = output[['Guarantee ID', 'Guarantee Name', 'Marketplace', \
+    output = output[['Deal ID', 'Guarantee ID', 'Guarantee Name', 'Marketplace', \
                      'Advertiser', \
-                     'AE Name', 'Agency', 'Deal Name', 'Deal ID', 'Primary Demo', 'Sold Start Date', 'Sold End Date', \
+                     'AE Name', 'Agency', 'Deal Name','Deal Year', 'Primary Demo', 'Sold Start Date', 'Sold End Date',  \
                      'Sold Prime Booked $', 'Sold Prime Deal Imp', 'Sold Prime Delv Imp', 'Sold Prime Imps Owed',
                      'Sold Prime Units', \
                      'Sold Prime CPM', 'Sold NP Booked $', 'Sold NP Deal Imp', 'Sold NP Delv Imp', 'Sold NP Imps Owed', \
@@ -447,11 +455,6 @@ def schedule_ADU(past_s_p, past_adu_p, past_s_np, past_adu_np, df1, startq, endq
 def raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, endq):
    
     weeks = week_range(startq, endq)
-
-    '''# Read in Ratings
-    internal_estimates = pd.read_csv(ratings_file)
-    ratings = get_ratings(df, internal_estimates, int(four_q[1][0]))
-    '''
     
     result = get_dict(df, ratings, endq)
     output = form_df(result)
@@ -478,29 +481,29 @@ def raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, en
     return date_string, basic_info, baselayer_p, baselayer_np, P_ADU_schedule, NP_ADU_schedule #, changeDF
 
 
-def format_df(raw, new, name):
-    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')
+def format_df(raw, new):
+    writer = pd.ExcelWriter(DIR_OUTPUT+ 'YM -- 1 ION ADU 3.0 (Arjun) -- ' +str(datetime.now().strftime("%Y-%m-%d"))+'.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
-    # Set Font
+    # Set Font 
     workbook.formats[0].set_font_name('Arial')
-
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
-    raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
+    raw[1].to_excel(writer, sheet_name='ADUs to schedule', startrow=7, startcol=2, header=False, index = False)
     
     new.to_excel(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Data.xlsx',sheet_name='Data', index = False)
 
-    worksheet = writer.sheets[name]
+    worksheet = writer.sheets['ADUs to schedule']
+    worksheet.set_zoom(85)
 
     # Clean the headers
     for col_num, value in enumerate(raw[1].columns.values):
-        if col_num <= 7:
+        if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 10:
+        elif col_num <= 11:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 34:
+        elif col_num <= 35:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
@@ -508,7 +511,7 @@ def format_df(raw, new, name):
     s = [] # stores the start column of each dataframe
     e = [] # stores the end column of each dataframe
     for i in range(2, len(raw)):
-        raw[i].iloc[:, 1:].to_excel(writer, sheet_name=name, startrow=7, startcol=count_col, index=False,
+        raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADUs to schedule', startrow=7, startcol=count_col, index=False,
                                     header=False)
         for col_num, value in enumerate(raw[i].columns.values[1:]):
             worksheet.write(5, count_col + col_num, value)
@@ -531,7 +534,7 @@ def format_df(raw, new, name):
         for r in range(8, count_row + 7):
             worksheet.write_formula(col + str(r),
                                     '{=SUM(' + s_letter[i + 1] + str(r) + ':' + e_letter[i + 1] + str(r) + ')}')
-
+   
     # Deals not in flight
     col = xlsxwriter.utility.xl_col_to_name(e[-1] + 2)
     Total_P_ADU_col = xlsxwriter.utility.xl_col_to_name(e[2] + 1)
@@ -544,11 +547,11 @@ def format_df(raw, new, name):
     # Header
     bold = workbook.add_format({'bold': True, 
                                 'font_name': 'Arial'})
-    worksheet.write(1, 1, 'ION Media', bold)
-    worksheet.write(2, 1, 'ADU Trust 3.0', bold)
+    worksheet.write(1, 2, 'ION Media', bold)
+    worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
                                    'font_name': 'Arial'})
-    worksheet.write(2, 2, raw[0], bold_blue)
+    worksheet.write(0, 2, raw[0], bold_blue)
 
     
     # Add Title & Merge
@@ -578,8 +581,8 @@ def format_df(raw, new, name):
         'font_name': 'Arial'})  # grey
 
     try:
-        worksheet.merge_range('C4:I4', 'DEAL', format_g)
-        worksheet.merge_range('C5:I5', ' ', format_g)
+        #worksheet.merge_range('C4:I4', 'DEAL', format_g)
+        #worksheet.merge_range('C5:I5', ' ', format_g)
         worksheet.merge_range(s_letter[3] + '4:' + e_letter[3] + '4', 'Prime - ADU Suggested Flighting', format_b)
         worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', 'Non Prime - ADU Suggested Flighting', format_o)
         worksheet.merge_range(s_letter[1] + '4:' + e_letter[1] + '4', 'Prime Fligting - Sold Units', format_b)
@@ -588,30 +591,31 @@ def format_df(raw, new, name):
     except:
         print('nope')
 
+
     # Headers for dataframes
-    for i in range(9, 58):
-        if i <= 12:
+    for i in range(2, 59):
+        if i <= 13:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 18:
+        elif i <= 19:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 24:
+        elif i <= 25:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 30:
+        elif i <= 31:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 36:
+        elif i <= 37:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 46:
+        elif i <= 47:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 57:
-                if i % 2 == 1:
+            if i != 58:
+                if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
                     worksheet.write(4, i, 'NP', format_g)
@@ -639,17 +643,18 @@ def format_df(raw, new, name):
     worksheet.write(5, e[3] + 2, 'Flight', format_g)
 
     # Group Columns
-    worksheet.set_column('D:E', None, None, {'level': 1})
-    worksheet.set_column('G:H', None, None, {'level': 1})
-    worksheet.set_column('L:AK', None, None, {'level': 1})
-    worksheet.set_column('AX:BA', None, None, {'level': 1})
+    worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
 
-    worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
+    
+    #worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
 
     # Autofilter
     worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 2) + str(count_row+7))
     
-
 
     # Get the Sum
     for col in range(s[0] - 4, e[3] + 3):
@@ -671,26 +676,28 @@ def format_df(raw, new, name):
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format2})
 
     # Column Width
-    worksheet.set_column(s_letter[0] + ':' + e_letter[0], 15)
+    worksheet.set_column('C' + ':' + e_letter[0], 15)
+    worksheet.set_column(0, 2, 2) 
+
 
     # Freeze the top rows and left columns
-    worksheet.freeze_panes(7, 11)
+    worksheet.freeze_panes(7, 12)
 
     
     # column Format
@@ -699,24 +706,24 @@ def format_df(raw, new, name):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('N:R', None, fmt2)
-    worksheet.set_column('S:S', None, fmt1)
-    worksheet.set_column('T:X', None, fmt2)
-    worksheet.set_column('Y:Y', None, fmt1)
-    worksheet.set_column('Z:AD', None, fmt2)
-    worksheet.set_column('AE:AE', None, fmt1)
-    worksheet.set_column('AF:AJ', None, fmt2)
-    worksheet.set_column('AK:AK', None, fmt1)
-    worksheet.set_column('AL:AN', None, fmt2)
-    worksheet.set_column('AO:AO', None, fmt3)    
-    worksheet.set_column('AP:AQ', None, fmt2)
-    worksheet.set_column('AR:AR', None, fmt1)
-    worksheet.set_column('AS:AS', None, fmt2)
-    worksheet.set_column('AT:AU', None, fmt3)
-    worksheet.set_column('AV:AY', None, fmt2)
-    worksheet.set_column('AZ:BA', None, fmt3)
-    worksheet.set_column('BB:BC', None, fmt2)
-    worksheet.set_column('BD:BF', None, fmt4)
+    worksheet.set_column('O:S', None, fmt2)
+    worksheet.set_column('T:T', None, fmt1)
+    worksheet.set_column('U:Y', None, fmt2)
+    worksheet.set_column('Z:Z', None, fmt1)
+    worksheet.set_column('AA:AE', None, fmt2)
+    worksheet.set_column('AF:AF', None, fmt1)
+    worksheet.set_column('AG:AK', None, fmt2)
+    worksheet.set_column('AL:AL', None, fmt1)
+    worksheet.set_column('AM:AO', None, fmt2)
+    worksheet.set_column('AP:AP', None, fmt3)    
+    worksheet.set_column('AQ:AR', None, fmt2)
+    worksheet.set_column('AS:AS', None, fmt1)
+    worksheet.set_column('AT:AT', None, fmt2)
+    worksheet.set_column('AU:AV', None, fmt3)
+    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BA:BB', None, fmt3)
+    worksheet.set_column('BC:BD', None, fmt2)
+    worksheet.set_column('BE:BG', None, fmt4)
     worksheet.set_column('BH:FL', None, fmt4)
     
     
@@ -725,34 +732,38 @@ def format_df(raw, new, name):
 
 
 
-def format_take_back(raw, new, name):
-    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+def format_take_back(raw, new):
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' ADUs to delete.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
     workbook = writer.book
 
-    # Set Font
-    workbook.formats[0].set_font_name('Arial')    
+    # Set Font 
+    workbook.formats[0].set_font_name('Arial')
+   
     
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
-    raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
+    raw[1].to_excel(writer, sheet_name='ADUs to delete', startrow=7, startcol=2, header=False, index = False)
 
-    worksheet = writer.sheets[name]
+    worksheet = writer.sheets['ADUs to delete']
+    worksheet.set_zoom(85)
+
     
     # Clean the headers
     for col_num, value in enumerate(raw[1].columns.values):
-        if col_num <= 7:
+        if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 10:
+        elif col_num <= 11:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 34:
+        elif col_num <= 35:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-
+            
+            
     s = [] # stores the start column of each dataframe
     e = [] # stores the end column of each dataframe
     for i in range(2, len(raw)):
-        raw[i].iloc[:, 1:].to_excel(writer, sheet_name=name, startrow=7, startcol=count_col, index=False,
+        raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADUs to delete', startrow=7, startcol=count_col, index=False,
                                     header=False)
         for col_num, value in enumerate(raw[i].columns.values[1:]):
             worksheet.write(5, count_col + col_num, value)
@@ -794,11 +805,11 @@ def format_take_back(raw, new, name):
     # Header
     bold = workbook.add_format({'bold': True, 
                                 'font_name': 'Arial'})
-    worksheet.write(1, 1, 'ION Media', bold)
-    worksheet.write(2, 1, 'ADU Trust 3.0', bold)
+    worksheet.write(1, 2, 'ION Media', bold)
+    worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
                                    'font_name': 'Arial'})
-    worksheet.write(2, 2, raw[0], bold_blue)
+    worksheet.write(0, 2, raw[0], bold_blue)
 
     
     # Add Title & Merge
@@ -828,8 +839,6 @@ def format_take_back(raw, new, name):
         'font_name': 'Arial'})  # grey
 
     try:
-        worksheet.merge_range('C4:I4', 'DEAL', format_g)
-        worksheet.merge_range('C5:I5', ' ', format_g)
         worksheet.merge_range(s_letter[3] + '4:' + e_letter[3] + '4', 'Prime - ADU Suggested Flighting', format_b)
         worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', 'Non Prime - ADU Suggested Flighting', format_o)
         worksheet.merge_range(s_letter[1] + '4:' + e_letter[1] + '4', 'Prime Fligting - Sold Units', format_b)
@@ -839,35 +848,36 @@ def format_take_back(raw, new, name):
         print('nope')
 
     # Headers for dataframes
-    for i in range(9, 58):
-        if i <= 12:
+    for i in range(2, 59):
+        if i <= 13:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 18:
+        elif i <= 19:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 24:
+        elif i <= 25:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 30:
+        elif i <= 31:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 36:
+        elif i <= 37:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 46:
+        elif i <= 47:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 57:
-                if i % 2 == 1:
+            if i != 58:
+                if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
                     worksheet.write(4, i, 'NP', format_g)
             else:
                 worksheet.write(4, i, 'Total', format_g)
-
+                
+                
     for i in range(s[0], e[0] + 2):
         worksheet.write(4, i, 'P', format_b)
         if i == e[0] + 1:
@@ -884,6 +894,7 @@ def format_take_back(raw, new, name):
         worksheet.write(4, i, 'NP', format_o)
         if i == e[3] + 1:
             worksheet.write(3, i, 'Total', format_o)
+
     worksheet.write(3, e[3] + 2, 'Deals', format_g)
     worksheet.write(4, e[3] + 2, 'Not in', format_g)
     worksheet.write(5, e[3] + 2, 'Flight', format_g)
@@ -894,12 +905,12 @@ def format_take_back(raw, new, name):
 
 
     # Group Columns
-    worksheet.set_column('D:E', None, None, {'level': 1})
-    worksheet.set_column('G:H', None, None, {'level': 1})
-    worksheet.set_column('L:AK', None, None, {'level': 1})
-    worksheet.set_column('AX:BA', None, None, {'level': 1})
+    worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
 
-    worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
 
     # Autofilter
     worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 3) + str(count_row+6))
@@ -926,26 +937,27 @@ def format_take_back(raw, new, name):
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$3',
+                                                                          'value': '$C$1',
                                                                           'format': format2})
 
     # Column Width
-    worksheet.set_column(s_letter[0] + ':' + e_letter[0], 15)
+    worksheet.set_column('C' + ':' + e_letter[0], 15)
+    worksheet.set_column(0, 2, 2) 
 
     # freeze the top rows and left columns
-    worksheet.freeze_panes(7, 11)
+    worksheet.freeze_panes(7, 12)
     
 
     # column Format
@@ -954,24 +966,24 @@ def format_take_back(raw, new, name):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('N:R', None, fmt2)
-    worksheet.set_column('S:S', None, fmt1)
-    worksheet.set_column('T:X', None, fmt2)
-    worksheet.set_column('Y:Y', None, fmt1)
-    worksheet.set_column('Z:AD', None, fmt2)
-    worksheet.set_column('AE:AE', None, fmt1)
-    worksheet.set_column('AF:AJ', None, fmt2)
-    worksheet.set_column('AK:AK', None, fmt1)
-    worksheet.set_column('AL:AN', None, fmt2)
-    worksheet.set_column('AO:AO', None, fmt3)    
-    worksheet.set_column('AP:AQ', None, fmt2)
-    worksheet.set_column('AR:AR', None, fmt1)
-    worksheet.set_column('AS:AS', None, fmt2)
-    worksheet.set_column('AT:AU', None, fmt3)
-    worksheet.set_column('AV:AY', None, fmt2)
-    worksheet.set_column('AZ:BA', None, fmt3)
-    worksheet.set_column('BB:BC', None, fmt2)
-    worksheet.set_column('BD:BF', None, fmt4)
+    worksheet.set_column('O:S', None, fmt2)
+    worksheet.set_column('T:T', None, fmt1)
+    worksheet.set_column('U:Y', None, fmt2)
+    worksheet.set_column('Z:Z', None, fmt1)
+    worksheet.set_column('AA:AE', None, fmt2)
+    worksheet.set_column('AF:AF', None, fmt1)
+    worksheet.set_column('AG:AK', None, fmt2)
+    worksheet.set_column('AL:AL', None, fmt1)
+    worksheet.set_column('AM:AO', None, fmt2)
+    worksheet.set_column('AP:AP', None, fmt3)    
+    worksheet.set_column('AQ:AR', None, fmt2)
+    worksheet.set_column('AS:AS', None, fmt1)
+    worksheet.set_column('AT:AT', None, fmt2)
+    worksheet.set_column('AU:AV', None, fmt3)
+    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BA:BB', None, fmt3)
+    worksheet.set_column('BC:BD', None, fmt2)
+    worksheet.set_column('BE:BG', None, fmt4)
     worksheet.set_column('BH:FL', None, fmt4)
     
 
@@ -979,8 +991,8 @@ def format_take_back(raw, new, name):
     return s, s_letter, e_letter
 
 
-def format_cur_standing(raw, new, name):
-    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' '+ name + '.xlsx', engine='xlsxwriter')
+def format_cur_standing(raw, new):
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Deal Delivery.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
     # Set Font
@@ -988,16 +1000,17 @@ def format_cur_standing(raw, new, name):
 
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
-    raw[1].to_excel(writer, sheet_name=name, startrow=7, startcol=2, header=False, index = False)
-    worksheet = writer.sheets[name]
+    raw[1].to_excel(writer, sheet_name='Deal Delivery', startrow=7, startcol=2, header=False, index = False)
+    worksheet = writer.sheets['Deal Delivery']
+    worksheet.set_zoom(85)
     
     # Clean the headers
     for col_num, value in enumerate(raw[1].columns.values):
-        if col_num <= 7:
+        if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 10:
+        elif col_num <= 11:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 34:
+        elif col_num <= 35:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
@@ -1014,11 +1027,11 @@ def format_cur_standing(raw, new, name):
     # Header
     bold = workbook.add_format({'bold': True, 
                                 'font_name': 'Arial'})
-    worksheet.write(1, 1, 'ION Media', bold)
-    worksheet.write(2, 1, 'ADU Trust 3.0', bold)
+    worksheet.write(1, 2, 'ION Media', bold)
+    worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
-                                'font_name': 'Arial'})
-    worksheet.write(2, 2, raw[0], bold_blue)
+                                   'font_name': 'Arial'})
+    worksheet.write(0, 2, raw[0], bold_blue)
 
     
     # Add Title & Merge
@@ -1047,68 +1060,120 @@ def format_cur_standing(raw, new, name):
         'fg_color': '#C0C0C0', 
         'font_name': 'Arial'})  # grey
 
-    try:
-        worksheet.merge_range('C4:I4', 'DEAL', format_g)
-        worksheet.merge_range('C5:I5', ' ', format_g)
-
-    except:
-        print('nope')
 
     # Headers for dataframes
-    for i in range(9, 58):
-        if i <= 12:
+    for i in range(2, 59):
+        if i <= 13:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 18:
+        elif i <= 19:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 24:
+        elif i <= 25:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 30:
+        elif i <= 31:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 36:
+        elif i <= 37:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 46:
+        elif i <= 47:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 57:
-                if i % 2 == 1:
+            if i != 58:
+                if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
                     worksheet.write(4, i, 'NP', format_g)
             else:
                 worksheet.write(4, i, 'Total', format_g)
-    worksheet.write(3, e[-1], 'Over', format_g)
-    worksheet.write(4, e[-1], 'Delivered', format_g)
+                
+                
+    worksheet.write(3, e[-1]+1, 'Over', format_g)
+    worksheet.write(4, e[-1]+1, 'Delivered', format_g)
     
+    worksheet.write(3, e[-1]+2, 'Linked', format_g)
+    worksheet.write(4, e[-1]+2, 'Deal', format_g)
+
+    worksheet.write(3, e[-1]+3, 'DealSize', format_g)
+    worksheet.write(4, e[-1]+3, 'Group', format_g)
+
+    worksheet.write(3, e[-1]+4, 'Flight', format_g)
+    worksheet.write(4, e[-1]+4, 'Length', format_g)
+
+    worksheet.write(3, e[-1]+5, 'FlightLen', format_g)
+    worksheet.write(4, e[-1]+5, 'Group', format_g)   
     
+    worksheet.write(3, e[-1]+6, 'ADU', format_g)
+    worksheet.write(4, e[-1]+6, 'Flag', format_g)
     
     # Current standing flag
-    delv_imp_col = xlsxwriter.utility.xl_col_to_name(41)
-    c = xlsxwriter.utility.xl_col_to_name(e[-1])
+    delv_imp_col = xlsxwriter.utility.xl_col_to_name(42)
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+1)
     for r in range(8, count_row + 7):
-        worksheet.write_formula(c + str(r), '{=IF('+delv_imp_col+str(r)+'>0, "Y", "N")' +'}')    
-
+        worksheet.write_formula(c + str(r), '{=IF('+delv_imp_col+str(r)+'>0, "Over Delv", "Uder Delv")' +'}')   
         
+    # Linked Deals Flag
+    deal_num_col = xlsxwriter.utility.xl_col_to_name(9)
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+2)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(c + str(r), '{=IF(ISNUMBER(SEARCH(",", '+deal_num_col+str(r)+')), '+'"Linked", "Individual")}')   
+    
+    
+    # Deal Size
+    deal_size_col = xlsxwriter.utility.xl_col_to_name(38)
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(c + str(r), '{=IF('+deal_size_col+str(r)+'<=100000, "0-100k", ' +\
+                                              'IF('+deal_size_col+str(r)+'<=500000, "100k-500k", ' +\
+                                              'IF('+deal_size_col+str(r)+'<=1000000, "500k-1M", ' +\
+                                              'IF('+deal_size_col+str(r)+'<=2000000, "1M-2M", ' +\
+                                              'IF('+deal_size_col+str(r)+'<=4000000, "2M-4M", "4M+")))))}')   
+    
+    
+    # Flight Length
+    start_date_col = xlsxwriter.utility.xl_col_to_name(12)
+    end_date_col = xlsxwriter.utility.xl_col_to_name(13)
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+4)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(c + str(r), '{=ROUND(('+end_date_col+str(r) +'-'+ start_date_col+str(r)+')/7, 0)}')   
+        
+        
+       
+    # Flight Length Group
+    flight_len_col = c
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(c + str(r), '{=IF('+flight_len_col+str(r)+'<=4, "4", ' +\
+                                              'IF('+flight_len_col+str(r)+'<=13, "13", ' +\
+                                              'IF('+flight_len_col+str(r)+'<=26, "26", ' +\
+                                              'IF('+flight_len_col+str(r)+'<=52, "52", "52+"))))}')   
+    
+    # With ADU Flag
+    NP_ADU_col = xlsxwriter.utility.xl_col_to_name(36)
+    P_ADU_col = xlsxwriter.utility.xl_col_to_name(30)
+    c = xlsxwriter.utility.xl_col_to_name(e[-1]+6)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(c + str(r), '{=IF(' +P_ADU_col+str(r) + '+' + NP_ADU_col+str(r) + '>0, "Yes", "No")}')   
+    
+    
     # Group Columns
-    worksheet.set_column('D:E', None, None, {'level': 1})
-    worksheet.set_column('G:H', None, None, {'level': 1})
-    worksheet.set_column('L:AK', None, None, {'level': 1})
-    worksheet.set_column('AX:BA', None, None, {'level': 1})
+    worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:AL', None, None, {'level': 1, 'hidden': 1})
 
     # Autofilter
-    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1]) + str(count_row+7))
+    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1]+6) + str(count_row+7))
     
     # Column Width
-    worksheet.set_column(s_letter[0] + ':' + e_letter[0], 15)
-
+    worksheet.set_column('C' + ':' + e_letter[0], 15)
+    worksheet.set_column(0, 2, 2) 
+    
     # freeze the top rows and left columns
-    worksheet.freeze_panes(7, 11)
+    worksheet.freeze_panes(7, 12)
 
     # column Format
     fmt1 = workbook.add_format({'num_format': '0.00', 'font_name': 'Arial'})
@@ -1116,26 +1181,33 @@ def format_cur_standing(raw, new, name):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('N:R', None, fmt2)
-    worksheet.set_column('S:S', None, fmt1)
-    worksheet.set_column('T:X', None, fmt2)
-    worksheet.set_column('Y:Y', None, fmt1)
-    worksheet.set_column('Z:AD', None, fmt2)
-    worksheet.set_column('AE:AE', None, fmt1)
-    worksheet.set_column('AF:AJ', None, fmt2)
-    worksheet.set_column('AK:AK', None, fmt1)
-    worksheet.set_column('AL:AN', None, fmt2)
-    worksheet.set_column('AO:AO', None, fmt3)    
-    worksheet.set_column('AP:AQ', None, fmt2)
-    worksheet.set_column('AR:AR', None, fmt1)
-    worksheet.set_column('AS:AS', None, fmt2)
-    worksheet.set_column('AT:AU', None, fmt3)
-    worksheet.set_column('AV:AY', None, fmt2)
-    worksheet.set_column('AZ:BA', None, fmt3)
-    worksheet.set_column('BB:BC', None, fmt2)
-    worksheet.set_column('BD:BF', None, fmt4)
-    worksheet.set_column('BH:FL', None, fmt4)
-        
+    worksheet.set_column('O:S', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('T:T', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('U:Y', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('Z:Z', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AA:AE', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AF:AF', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AG:AK', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AL:AL', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AM:AO', None, fmt2)
+    worksheet.set_column('AP:AP', None, fmt3)    
+    worksheet.set_column('AQ:AR', None, fmt2)
+    worksheet.set_column('AS:AS', None, fmt1)
+    worksheet.set_column('AT:AT', None, fmt2)
+    worksheet.set_column('AU:AV', None, fmt3)
+    worksheet.set_column('AW:AZ', None, fmt2)
+    worksheet.set_column('BA:BB', None, fmt3)
+    worksheet.set_column('BC:BD', None, fmt2)
+    worksheet.set_column('BE:BG', None, fmt4)
+    worksheet.set_column('BH:BM', None, fmt4, {'level': 1, 'hidden': 1})
+    
+    
+    # Add pivot table name
+    format_w = workbook.add_format({'font_color': 'white', 'font_name': 'Arial'})
+    
+    for c in range(2, 65):
+        col = xlsxwriter.utility.xl_col_to_name(c)
+        worksheet.write_formula(col + '7', '{=CONCATENATE(' + col + '4, '+col + '5, '+col+'6)}', format_w)      
     
     writer.save()
     return s, s_letter, e_letter
@@ -1153,6 +1225,8 @@ def format_forecast_actual(all_ratings, four_q):
     all_ratings[0].to_excel(writer, sheet_name='Ratings Summary', startrow=5, startcol=2, header=True, index = False)
 
     worksheet = writer.sheets['Ratings Summary']
+    worksheet.set_zoom(85)
+
 
     s = [2] # stores the start column of each dataframe
     e = [4] # stores the end column of each dataframe
@@ -1311,7 +1385,8 @@ def format_forecast_actual(all_ratings, four_q):
     worksheet.set_column(fore_act_prev_p_delta + ':' + fore_act_prev_np_delta, None, fmt2)
     worksheet.set_column(fore_act_cur_p_delta + ':' + fore_act_cur_np_delta, None, fmt2)
 
-    
+    worksheet.set_column(0, 2, 2) 
+
     writer.save()
     return s, s_letter, e_letter
 
@@ -1326,7 +1401,7 @@ def new_data(raw, quarters):
         gid=v['Guarantee ID']
         if gid not in general:
             general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
-                                        'Week End Date': [], 'Selling Title': [], \
+                                        'Week End Date': [],  'Selling Title': [], \
                                         'Days And Times': [], 'ADU Ind': [], 'Booked Dollars': [],
                                         'Primary Demo Equiv Deal Imp': [], \
                                         #'Primary Demo Equiv Post Imp - IE 1': [],
@@ -1364,7 +1439,7 @@ def new_data(raw, quarters):
         gid=v['Guarantee ID']
         if gid not in general:
             general[gid] = {'Year': [], 'Quarter': [], 'Year + Quarter': [], 'Week Start Date': [],
-                                        'Week End Date': [], 'Selling Title': [], \
+                                        'Week End Date': [],  'Selling Title': [], \
                                         'Days And Times': [], 'ADU Ind': [], 'Booked Dollars': [],
                                         'Primary Demo Equiv Deal Imp': [], \
                                         #'Primary Demo Equiv Post Imp - IE 1': [],
@@ -1403,7 +1478,7 @@ def newdata_to_df(df, general, output):
     basics = df[['Guarantee ID', 'Guarantee Name', 'Deal Numbers in Guarantee', 'Marketplace', \
                  'Advertiser', \
                  'AE Name', 'Agency Name (Billing)', 'Deal Name', 'Deal Number', 'Deal Flight Start Date', \
-                 'Deal Flight End Date', 'Primary Demo']]
+                 'Deal Flight End Date', 'Deal Year', 'Primary Demo']]
     
     # Create a dataframe from general dictionary
     column_names = ['Guarantee ID', 'Year', 'Quarter', 'Year + Quarter', 'Week Start Date', 'Week End Date',
@@ -1425,10 +1500,10 @@ def newdata_to_df(df, general, output):
 
     newdata_df = pd.DataFrame(rows)
 
-
     newdata_df.columns = column_names
     newdata_df['In System'] = 'N'
-
+    
+    
     # To get the basic information for new data
     combined = pd.merge(newdata_df, basics, how='left', on='Guarantee ID').drop_duplicates(
         subset=['Guarantee ID', 'Week Start Date', 'Week End Date', 'Selling Title'])
@@ -1436,7 +1511,7 @@ def newdata_to_df(df, general, output):
     # To get impression for new data
     imp_df = output[['Guarantee ID', 'P Forecast Imp', 'NP Forecast Imp']]
     combined = pd.merge(combined, imp_df, on='Guarantee ID')
-
+    
     imp = dict()
     for i, r in combined.iterrows():
         if r['Selling Title'] == 'P':
@@ -1449,11 +1524,11 @@ def newdata_to_df(df, general, output):
 
     combined = pd.merge(combined, ADU_E_D_I, how='left', on=['Guarantee ID', 'Selling Title', 'Equiv Units'])
     #combined['Primary Demo Equiv Post Imp'] = combined['Primary Demo ADU Equiv Deal Imp']
-
+    
     combined = combined[['Guarantee ID', 'Guarantee Name', 'Deal Numbers in Guarantee', 'Marketplace', \
                          'Advertiser', \
                          'AE Name', 'Agency Name (Billing)', 'Deal Name', 'Deal Number', 'Deal Flight Start Date', \
-                         'Deal Flight End Date', 'Primary Demo', 'Year', 'Quarter', 'Year + Quarter', 'Week Start Date', \
+                         'Deal Flight End Date', 'Deal Year', 'Primary Demo', 'Year', 'Quarter', 'Year + Quarter', 'Week Start Date', \
                          'Week End Date', 'Selling Title', 'Days And Times', 'ADU Ind', 'Booked Dollars', \
                          'Primary Demo Equiv Deal Imp', \
                          #'Primary Demo Equiv Post Imp - IE 1', \
@@ -1687,12 +1762,10 @@ def seperate(raw):
     return sch, takeback
 
 
-def get_report_values(quarters, startdate, liab):
-    last_q = quarter_startdate(quarters, find_quarters(quarters, startdate))[0]
-    report_q = find_quarters(quarters, datetime.strptime(last_q, '%m/%d/%Y'))
-    quar = []
-    for i in range(4):
-        quar.append(str(report_q[i][1]) + ' ' + report_q[i][0] + 'Q')
+def get_report_values(liab):
+  
+    quar = sorted(liab['Year + Quarter'].unique())
+        
     table1 = pd.pivot_table(liab[liab['In System']=='Y'], index = 'Year + Quarter', columns = 'ADU Ind', values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
     table2 = pd.pivot_table(liab, index = 'Year + Quarter', columns = ['ADU Ind'], values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
 
@@ -1720,7 +1793,6 @@ def get_report_values(quarters, startdate, liab):
 
 
     table1.reset_index(inplace=True)
-    #print(table1)
 
     order = table1['Year + Quarter'].tolist()
 
@@ -1746,7 +1818,7 @@ def get_report_values(quarters, startdate, liab):
     effective_adu_total_new = table2['Effective_ADU']['All'].tolist()
 
     i = order.index(quar[0])
-    for j in range(i, i+4):
+    for j in range(i, i+len(quar)):
         begin_liab.append(sum(owed_v_total[:j]))
         begin_imp_owed.append(sum(owed_imp_total[:j]))
         begin_adu_req.append(sum(effective_adu_total[:j]))
@@ -1771,7 +1843,7 @@ def get_report_values(quarters, startdate, liab):
         cur_q_imp_paid_new.append(owed_imp_adu_new[i])
         cur_q_adu_given_new.append(adu_units_new[i])
 
-    for i in range(4):
+    for i in range(len(quar)):
         cur_q_adu_req.append(ending_adu_req[i]-begin_adu_req[i]+cur_q_adu_given[i])
 
         
@@ -1780,19 +1852,43 @@ cur_q_imp_paid, cur_q_adu_given, cur_q_liab_paid_new, cur_q_imp_paid_new, cur_q_
 ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_new, ending_adu_req_new))
 
 
+from openpyxl.utils import get_column_letter
+
 def get_summary(report_values, date_string, quar):
 
-    wb = load_workbook(filename = DIR_INPUT + 'Summary.xlsx')
-    ws = wb["Summary"]
-   
-    row_start = ws.max_row + 3
+    wb = openpyxl.Workbook()
+    ws = wb.create_sheet("Summary")
+    ws.sheet_view.zoomScale = 85
+    
+    row_start = ws.max_row + 4
+    
+    #Header
+    ws.cell(1, 2).value = date_string
+    ws.cell(1, 2).font = Font(bold=True, color=colors.BLUE, name = 'Arial')
+    ws.cell(2, 2).value = 'ION Media'
+    ws.cell(2, 2).font = Font(bold=True, name = 'Arial')    
+    ws.cell(3, 2).value = 'ADU Trust 3.0'
+    ws.cell(3, 2).font = Font(name = 'Arial') 
+    
+    #Set column width
+    ws.column_dimensions['A'].width = 8
+    
+    column = 2
+    space = ['C', 'G', 'K', 'R']
+    while column < 25:
+        i = get_column_letter(column)
+        if i not in space:
+            ws.column_dimensions[i].width = 12
+        else:
+            ws.column_dimensions[i].width = 3
+        column += 1
     
     # write date and year+quarter  
     ws.cell(row_start, 2).value = date_string
     ws.cell(row_start, 2).font = Font(bold=True, color=colors.RED, name = 'Arial')
     ws.cell(row_start, 2).fill = PatternFill("solid", fgColor=colors.YELLOW)
     
-    for i in range(2, 6):
+    for i in range(2, 2+len(quar)):
         ws.cell(row_start+i, 2).value = quar[i-2]
         ws.cell(row_start+i, 2).font = Font(name = 'Arial')
     
@@ -1804,6 +1900,8 @@ def get_summary(report_values, date_string, quar):
          'Liaility Paid', 'Impression Paid', 'ADUs Given', 'Liaility Paid(new)','Impression Paid (new sch)', 'ADUs Given(new sch)', \
          'Liability Bal', 'Impression owed', 'ADUs Required','Liaility Bal(new)', 'Impression owed(new sch)', 'ADUs Required(new Sch)']
     
+    wb.save(DIR_OUTPUT+'Summary.xlsx')
+    
     val_i = 0
     for col_i in range(4, 25):
         if col_i in {7,11,18}:
@@ -1814,7 +1912,7 @@ def get_summary(report_values, date_string, quar):
             ws.cell(row_start+1, col_i).value = h2[val_i]
             ws.cell(row_start+1, col_i).font = Font(bold=True, underline="single", name = 'Arial')
         
-            for r in range(row_start+2, row_start+6):
+            for r in range(row_start+2, row_start+2+len(quar)):
                 ws.cell(r, col_i).value = report_values[val_i][r-row_start-2]
                 ws.cell(r, col_i).font = Font(name = 'Arial')
                 ws.cell(r, col_i).number_format = '#,##0'
@@ -1823,7 +1921,7 @@ def get_summary(report_values, date_string, quar):
     ws.column_dimensions.group(start='O', end='Q', hidden=True)
     ws.column_dimensions.group(start='V', end='X', hidden=True)
 
-    wb.save(DIR_INPUT+'Summary.xlsx')
+    wb.save(DIR_OUTPUT+'Summary.xlsx')
     return
 
 
@@ -1832,7 +1930,7 @@ def create_pivot():
     win32c = win32com.client.constants
     Excel.Visible = 0
 
-    wb =Excel.Workbooks.Open(DIR_OUTPUT+datetime.strptime(str(datetime.now().strftime("%m/%d/%Y")), '%m/%d/%Y').strftime('%Y-%m-%d')+' ADU Data.xlsx')
+    wb =Excel.Workbooks.Open(DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d"))+' ADU Data.xlsx')
     Sheet1 = wb.Worksheets("Data")
 
     PivotSourceRange = Sheet1.UsedRange
@@ -1880,44 +1978,119 @@ def create_pivot():
     Excel.Application.Quit()   
     return 
 
+def create_summary_pivot():
+    Excel = win32com.client.gencache.EnsureDispatch('Excel.Application') 
+    win32c = win32com.client.constants
+    Excel.Visible = 1
+
+    wb =Excel.Workbooks.Open(DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Delivery.xlsx')
+    ws1 = wb.Worksheets("Deal Delivery")
+
+    cl1 = ws1.Cells(7,3)
+    cl2 = ws1.Cells(ws1.UsedRange.Rows.Count,65)
+   
+    PivotSourceRange = ws1.Range(cl1, cl2)
+    PivotSourceRange.Select()
+
+    wb.Sheets.Add(After=wb.Sheets("Deal Delivery"))
+    ws2 = wb.Worksheets(2)
+    ws2.Name = 'Pivot'
+    
+    # Pivot Table 1
+    cl3=ws2.Cells(3,1)
+    PivotTargetRange= ws2.Range(cl3,cl3)
+    PivotTableName = 'SummaryPivotTable'
+
+    PivotCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=PivotSourceRange, Version=win32c.xlPivotTableVersion14)
+    PivotTable = PivotCache.CreatePivotTable(TableDestination=PivotTargetRange, TableName=PivotTableName, DefaultVersion=win32c.xlPivotTableVersion14)
+
+    PivotTable.PivotFields('LinkedDeal').Orientation = win32c.xlRowField
+    PivotTable.PivotFields('SOLD Deal Year').Orientation = win32c.xlColumnField
+    #PivotTable.PivotFields('SOLD Guarantee ID').Orientation = win32c.xlDataField
+    #PivotTable.PivotFields('Total Booked $').Orientation = win32c.xlDataField
+
+    PivotTable.AddDataField(PivotTable.PivotFields('SOLD Guarantee ID'), "Num of Deals", win32c.xlCount)
+    PivotTable.AddDataField(PivotTable.PivotFields('Total Booked $'))
+ 
+    PivotTable.InGridDropZones = True
+    PivotTable.RowAxisLayout(win32c.xlTabularRow)   
+
+
+    # Pivot Table 2
+    cl3=ws2.Cells(ws2.UsedRange.Rows.Count+7,1)
+    PivotTargetRange= ws2.Range(cl3,cl3)
+    PivotTableName = 'DemoTable'
+
+    PivotCache = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=PivotSourceRange, Version=win32c.xlPivotTableVersion14)
+    PT = PivotCache.CreatePivotTable(TableDestination=PivotTargetRange, TableName=PivotTableName, DefaultVersion=win32c.xlPivotTableVersion14)
+
+    PT.PivotFields('SOLD Deal Year').Orientation = win32c.xlPageField
+    PT.PivotFields('SOLD Primary Demo').Orientation = win32c.xlRowField
+    #PT.PivotFields('ADUFlag').Orientation = win32c.xlColumnField
+
+    PT.AddDataField(PT.PivotFields('SOLD Guarantee ID'), "Num of Deals", win32c.xlCount)
+    PT.AddDataField(PT.PivotFields('Total Booked $'))
+    PT.AddDataField(PT.PivotFields('Total Units'))
+ 
+    PT.InGridDropZones = True
+    PT.RowAxisLayout(win32c.xlTabularRow)   
+    
+    
+    # format
+    ws2 = wb.Worksheets('Pivot')
+    ws2.UsedRange.Font.Name = 'Arial'
+    ws2.UsedRange.Font.Size = 10
+    ws2.UsedRange.NumberFormat = "#,##0"
+    
+   # Calculated Fields
+    #PivotTable.CalculatedFields().Add('Dollar %','= Total Booked $ / GrossUnits')
+    
+    wb.Save()
+    wb.Close(True)
+    Excel.Application.Quit()   
+    return 
+
+
 def combine_xlsx_files():
     
-    f1 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Schedule.xlsx'
-    f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Take Back.xlsx'
-    f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Current Standing.xlsx'
-    f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
-    f5 = DIR_INPUT + 'Summary.xlsx'
+    f1 = DIR_OUTPUT + 'YM -- 1 ION ADU 3.0 (Arjun) -- ' + str(datetime.now().strftime("%Y-%m-%d")) + '.xlsx'
+    f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADUs to delete.xlsx'
+    f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Delivery.xlsx'
+    #f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
+    f5 = DIR_OUTPUT + 'Summary.xlsx'
     f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
     
-    print('Combining ADU schedule')
+    print('Combining ADUs to schedule')
     wb_comb = xw.Book(f1)
     wb1 = xw.Book(f5)
     ws1 = wb1.sheets('Summary')
-    ws1.api.Copy(Before=wb_comb.sheets("ADU Schedule").api)
+    ws1.api.Copy(Before=wb_comb.sheets("ADUs to schedule").api)
     wb1.close()
     
-    print('Combining ADU take back')
+    print('Combining ADUs to delete')
     wb2 = xw.Book(f2)
-    ws2 = wb2.sheets('ADU Take Back')
-    ws2.api.Copy(After=wb_comb.sheets("ADU Schedule").api)
+    ws2 = wb2.sheets('ADUs to delete')
+    ws2.api.Copy(After=wb_comb.sheets("ADUs to schedule").api)
     wb2.close()
 
-    print('Combining deal current standing')
+    print('Combining Deal Delivery')
     wb3 = xw.Book(f3)
-    ws3 = wb3.sheets('Deal Current Standing')
+    ws3 = wb3.sheets('Deal Delivery')
     ws3.api.Copy(After=wb_comb.sheets("Summary").api)
+    ws4 = wb3.sheets('Pivot')
+    ws4.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb3.close()
     
-    print('Combining pivot')
-    wb4 = xw.Book(f4)
-    ws4 = wb4.sheets("Pivot Table")
-    ws4.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
-    wb4.close()
+    #print('Combining pivot')
+    #wb4 = xw.Book(f4)
+    #ws4 = wb4.sheets("Pivot Table")
+    #ws4.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
+    #wb4.close()
     
     print('Combining Ratings Summary')
     wb5 = xw.Book(f6)
     ws5 = wb5.sheets("Ratings Summary")
-    ws5.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
+    ws5.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb5.close()
     
     print('Saving file')
@@ -1989,20 +2162,21 @@ def main(Q_num = 2):
 
     print('Exporting ADU schedule file')
     sep = seperate(raw)
-    format_df(sep[0], liab_update, 'ADU Schedule')
-    format_take_back(sep[1], liab_update, 'ADU Take Back')
-    format_cur_standing(raw[:2], liab_update, 'Deal Current Standing')
+    format_df(sep[0], liab_update)
+    format_take_back(sep[1], liab_update)
+    format_cur_standing(raw[:2], liab_update)
 
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
 
     print('Creating pivot table')
     create_pivot()
+    create_summary_pivot()
     t6 = time.time()
     print('Time for creating pivot table: ', t6-t5)
 
     print('Generating summary')
-    quar, report_values = get_report_values(quarters, startdate, liab_update)
+    quar, report_values = get_report_values(liab_update)
     get_summary(report_values, date_string, quar)
     t7 = time.time()
     print('Time for generating summary: ', t7-t6)
