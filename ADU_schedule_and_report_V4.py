@@ -28,7 +28,7 @@ from openpyxl.utils import get_column_letter
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
@@ -1836,11 +1836,11 @@ def get_report_values(liab):
         cur_q_liab.append(owed_v_spots[i])
         cur_q_imp_owed.append(owed_imp_spots[i])
         
-        cur_q_liab_paid.append(owed_v_adu[i])
-        cur_q_imp_paid.append(owed_imp_adu[i])
+        cur_q_liab_paid.append(-owed_v_adu[i])
+        cur_q_imp_paid.append(-owed_imp_adu[i])
         cur_q_adu_given.append(adu_units[i])
-        cur_q_liab_paid_new.append(owed_v_adu_new[i])
-        cur_q_imp_paid_new.append(owed_imp_adu_new[i])
+        cur_q_liab_paid_new.append(-owed_v_adu_new[i])
+        cur_q_imp_paid_new.append(-owed_imp_adu_new[i])
         cur_q_adu_given_new.append(adu_units_new[i])
 
     for i in range(len(quar)):
@@ -2056,13 +2056,12 @@ def combine_xlsx_files():
     f1 = DIR_OUTPUT + 'YM -- 1 ION ADU 3.0 (Arjun) -- ' + str(datetime.now().strftime("%Y-%m-%d")) + '.xlsx'
     f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADUs to delete.xlsx'
     f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Delivery.xlsx'
-    #f4 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Data.xlsx'
-    f5 = DIR_OUTPUT + 'Summary.xlsx'
-    f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
+    f4 = DIR_OUTPUT + 'Summary.xlsx'
+    f5 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
     
     print('Combining ADUs to schedule')
     wb_comb = xw.Book(f1)
-    wb1 = xw.Book(f5)
+    wb1 = xw.Book(f4)
     ws1 = wb1.sheets('Summary')
     ws1.api.Copy(Before=wb_comb.sheets("ADUs to schedule").api)
     wb1.close()
@@ -2081,24 +2080,19 @@ def combine_xlsx_files():
     ws4.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb3.close()
     
-    #print('Combining pivot')
-    #wb4 = xw.Book(f4)
-    #ws4 = wb4.sheets("Pivot Table")
-    #ws4.api.Copy(After=wb_comb.sheets("ADU Take Back").api)
-    #wb4.close()
-    
     print('Combining Ratings Summary')
-    wb5 = xw.Book(f6)
-    ws5 = wb5.sheets("Ratings Summary")
+    wb4 = xw.Book(f5)
+    ws5 = wb4.sheets("Ratings Summary")
     ws5.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
-    wb5.close()
+    wb4.close()
     
     print('Saving file')
     wb_comb.save()
     wb_comb.app.quit()
     os.remove(f2)
     os.remove(f3)
-    os.remove(f6)
+    os.remove(f4)
+    os.remove(f5)
     
     return
 
