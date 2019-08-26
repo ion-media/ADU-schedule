@@ -28,7 +28,7 @@ from openpyxl.utils import get_column_letter
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
+DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT='//ion.media/shared/1 Commercial/! IM 3.0/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
@@ -552,7 +552,10 @@ def format_df(raw, new):
     worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
                                    'font_name': 'Arial'})
-    worksheet.write(0, 2, raw[0], bold_blue)
+    white = workbook.add_format({'font_color': 'white', 
+                                    'font_name': 'Arial'})
+    worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
+    worksheet.write(0, 3, raw[0], white)
 
     
     # Add Title & Merge
@@ -677,19 +680,19 @@ def format_df(raw, new):
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format2})
 
     # Column Width
@@ -810,7 +813,10 @@ def format_take_back(raw, new):
     worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
                                    'font_name': 'Arial'})
-    worksheet.write(0, 2, raw[0], bold_blue)
+    white = workbook.add_format({'font_color': 'white', 
+                                    'font_name': 'Arial'})
+    worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
+    worksheet.write(0, 3, raw[0], white)
 
     
     # Add Title & Merge
@@ -938,19 +944,19 @@ def format_take_back(raw, new):
 
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$C$1',
+                                                                          'value': '$D$1',
                                                                           'format': format2})
 
     # Column Width
@@ -1032,7 +1038,10 @@ def format_cur_standing(raw, new):
     worksheet.write(2, 2, 'ADU Trust 3.0', bold)
     bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
                                    'font_name': 'Arial'})
-    worksheet.write(0, 2, raw[0], bold_blue)
+    white = workbook.add_format({'font_color': 'white', 
+                                    'font_name': 'Arial'})
+    worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
+    worksheet.write(0, 3, raw[0], white)
 
     
     # Add Title & Merge
@@ -1864,12 +1873,13 @@ def get_summary(report_values, date_string, quar):
     row_start = ws.max_row + 4
     
     #Header
-    ws.cell(1, 2).value = date_string
+    ws.cell(1, 2).value = datetime.now().strftime("%m/%d/%Y")
     ws.cell(1, 2).font = Font(bold=True, color=colors.BLUE, name = 'Arial')
     ws.cell(2, 2).value = 'ION Media'
     ws.cell(2, 2).font = Font(bold=True, name = 'Arial')    
     ws.cell(3, 2).value = 'ADU Trust 3.0'
     ws.cell(3, 2).font = Font(name = 'Arial') 
+
     
     #Set column width
     ws.column_dimensions['A'].width = 8
@@ -1885,7 +1895,7 @@ def get_summary(report_values, date_string, quar):
         column += 1
     
     # write date and year+quarter  
-    ws.cell(row_start, 2).value = date_string
+    ws.cell(row_start, 2).value = datetime.now().strftime("%m/%d/%Y")
     ws.cell(row_start, 2).font = Font(bold=True, color=colors.RED, name = 'Arial')
     ws.cell(row_start, 2).fill = PatternFill("solid", fgColor=colors.YELLOW)
     
