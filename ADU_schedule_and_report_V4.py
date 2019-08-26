@@ -2070,12 +2070,7 @@ def combine_xlsx_files():
     f4 = DIR_OUTPUT + 'Summary.xlsx'
     f5 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
     
-    print('Combining ADUs to schedule')
     wb_comb = xw.Book(f1)
-    wb1 = xw.Book(f4)
-    ws1 = wb1.sheets('Summary')
-    ws1.api.Copy(Before=wb_comb.sheets("ADUs to schedule").api)
-    wb1.close()
     
     print('Combining ADUs to delete')
     wb2 = xw.Book(f2)
@@ -2086,7 +2081,7 @@ def combine_xlsx_files():
     print('Combining Deal Delivery')
     wb3 = xw.Book(f3)
     ws3 = wb3.sheets('Deal Delivery')
-    ws3.api.Copy(After=wb_comb.sheets("Summary").api)
+    ws3.api.Copy(Before=wb_comb.sheets("ADUs to schedule").api)
     ws4 = wb3.sheets('Pivot')
     ws4.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb3.close()
@@ -2096,6 +2091,13 @@ def combine_xlsx_files():
     ws5 = wb4.sheets("Ratings Summary")
     ws5.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb4.close()
+    
+    print('Combining Summary')
+    
+    wb1 = xw.Book(f4)
+    ws1 = wb1.sheets('Summary')
+    ws1.api.Copy(Before=wb_comb.sheets("Deal Delivery").api)
+    wb1.close()
     
     print('Saving file')
     wb_comb.save()
