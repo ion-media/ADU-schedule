@@ -1269,11 +1269,11 @@ def format_forecast_actual(all_ratings, four_q):
     
     fore_act_prev_p = xlsxwriter.utility.xl_col_to_name(e[-1]+2)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + actual_prev_p + str(r) + '/' + forecast_prev_p + str(r) +'}')   
+        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + actual_prev_p + str(r) + '/' + forecast_prev_p + str(r) + '-1' +'}')   
           
     fore_act_prev_np = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + actual_prev_np + str(r) +'/' + forecast_prev_np + str(r) + '}')   
+        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + actual_prev_np + str(r) +'/' + forecast_prev_np + str(r) + '-1'+ '}')   
 
     fore_act_prev_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+4)
     for r in range(7, count_row+6):
@@ -1287,11 +1287,11 @@ def format_forecast_actual(all_ratings, four_q):
         
     fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+7)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + actual_cur_p + str(r) +'/' + forecast_cur_p +str(r) + '}')   
+        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + actual_cur_p + str(r) +'/' + forecast_cur_p +str(r) + '-1'+ '}')   
           
     fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+8)
     for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + actual_cur_np + str(r) + '/' + forecast_cur_np + str(r) + '}')   
+        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + actual_cur_np + str(r) + '/' + forecast_cur_np + str(r) + '-1'+ '}')   
 
     fore_act_cur_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+9)
     for r in range(7, count_row+6):
