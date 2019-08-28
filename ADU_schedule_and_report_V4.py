@@ -2126,7 +2126,19 @@ def forecast_actual(df, internal_estimates, four_q):
     forecast_prev = get_ratings(df, internal_estimates, int(four_q[0][0]), int(four_q[0][1]))
     forecast_cur = get_ratings(df, internal_estimates, int(four_q[1][0]), int(four_q[1][1]))
     forecast_next = get_ratings(df, internal_estimates, int(four_q[2][0]), int(four_q[2][1]))
-    return forecast_prev, forecast_cur, forecast_next, actual_prev, actual_cur
+
+    demo_sort_df = df.groupby(['Primary Demo']).sum()['Booked Dollars'].reset_index().sort_values('Booked Dollars', ascending=False)
+    demo_sort = demo_sort_df['Primary Demo'].tolist()    
+    
+    all_df = [forecast_prev, forecast_cur, forecast_next, actual_prev, actual_cur]
+    res = []
+    for temp in all_df:
+        temp = temp.set_index('Demo')
+        temp = temp.reindex(demo_sort)
+        temp = temp.reset_index()
+        res.append(temp)
+    return res
+
 
 
 def main(Q_num = 2):
@@ -2207,5 +2219,6 @@ def main(Q_num = 2):
     #copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
+
 
 main()
