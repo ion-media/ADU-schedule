@@ -28,9 +28,11 @@ from openpyxl.utils import get_column_letter
 
 # Global parameter
 DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
+DIR_INPUT='C:/ION/Commercial/ADU_Report/V2/'
 DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT='//ion.media/shared/1 Commercial/! IM 3.0/'
+DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM'])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)'])
@@ -511,11 +513,18 @@ def format_df(raw, new):
 
     s = [] # stores the start column of each dataframe
     e = [] # stores the end column of each dataframe
+    date_fmt = workbook.add_format({'num_format':'mm/dd/yyyy',
+                                    'font_name': 'Arial'})     
     for i in range(2, len(raw)):
         raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADUs to schedule', startrow=7, startcol=count_col, index=False,
                                     header=False)
-        for col_num, value in enumerate(raw[i].columns.values[1:]):
-            worksheet.write(5, count_col + col_num, value)
+        if i < 4:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                worksheet.write(5, count_col + col_num, value)
+        else:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                value = datetime.strptime(value, '%m/%d/%Y')
+                worksheet.write_datetime(5, count_col + col_num, value, date_fmt)
         s.append(count_col)
         for r in range(count_row):
             for c in range(count_col, count_col):
@@ -678,26 +687,27 @@ def format_df(raw, new):
     format3 = workbook.add_format({'bg_color': 'white', 
                                    'font_name': 'Arial'})
 
-    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
+    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6' , {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format2})
 
     # Column Width
     worksheet.set_column('C' + ':' + e_letter[0], 15)
     worksheet.set_column(0, 2, 2) 
+    worksheet.set_column(s_letter[3]+ ':' + e_letter[4], 10) 
 
 
     # Freeze the top rows and left columns
@@ -763,14 +773,21 @@ def format_take_back(raw, new):
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
             
-            
+    date_fmt = workbook.add_format({'num_format':'mm/dd/yyyy',
+                                    'font_name': 'Arial'})        
     s = [] # stores the start column of each dataframe
     e = [] # stores the end column of each dataframe
     for i in range(2, len(raw)):
         raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADUs to delete', startrow=7, startcol=count_col, index=False,
                                     header=False)
-        for col_num, value in enumerate(raw[i].columns.values[1:]):
-            worksheet.write(5, count_col + col_num, value)
+        if i < 4:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                worksheet.write(5, count_col + col_num, value)
+        else:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                value = datetime.strptime(value, '%m/%d/%Y')
+                worksheet.write_datetime(5, count_col + col_num, value, date_fmt)
+
         s.append(count_col)
         for r in range(count_row):
             for c in range(count_col, count_col):
@@ -817,6 +834,7 @@ def format_take_back(raw, new):
                                     'font_name': 'Arial'})
     worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
     worksheet.write(0, 3, raw[0], white)
+
 
     
     # Add Title & Merge
@@ -934,34 +952,36 @@ def format_take_back(raw, new):
     # Add a format. Light red fill with dark red text.
     format1 = workbook.add_format({'bg_color': '#FFC7CE',
                                    'font_color': '#9C0006', 
-                                    'font_name': 'Arial'})
+                                   'font_name': 'Arial'})
     # Add a format. Green fill with dark green text.
     format2 = workbook.add_format({'bg_color': '#C6EFCE',
                                    'font_color': '#006100', 
-                                    'font_name': 'Arial'})
+                                   'font_name': 'Arial'})
     format3 = workbook.add_format({'bg_color': 'white', 
                                     'font_name': 'Arial'})
+        
 
-    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
+    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6' , {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format2})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '<',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format1})
     worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
                                                                           'criteria': '>=',
-                                                                          'value': '$D$1',
+                                                                          'value': 'Datevalue($D$1)',
                                                                           'format': format2})
 
     # Column Width
     worksheet.set_column('C' + ':' + e_letter[0], 15)
     worksheet.set_column(0, 2, 2) 
+    worksheet.set_column(s_letter[3]+ ':' + e_letter[4], 10) 
 
     # freeze the top rows and left columns
     worksheet.freeze_panes(7, 12)
@@ -996,7 +1016,6 @@ def format_take_back(raw, new):
 
     writer.save()
     return s, s_letter, e_letter
-
 
 def format_cur_standing(raw, new):
     writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Deal Delivery.xlsx', engine='xlsxwriter')
@@ -2219,6 +2238,5 @@ def main(Q_num = 2):
     #copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
-
 
 main()
