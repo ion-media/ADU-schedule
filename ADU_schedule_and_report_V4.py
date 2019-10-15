@@ -1795,9 +1795,13 @@ def seperate(raw):
     return sch, takeback
 
 
-def get_report_values(liab):
+def get_report_values(liab, four_q):
   
     quar = sorted(liab['Year + Quarter'].unique())
+   
+    cur_year_quar = str(four_q[2][1]) + ' ' + four_q[2][0] + 'Q'
+    quar = quar[:quar.index(cur_year_quar)+1]
+   
         
     table1 = pd.pivot_table(liab[liab['In System']=='Y'], index = 'Year + Quarter', columns = 'ADU Ind', values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
     table2 = pd.pivot_table(liab, index = 'Year + Quarter', columns = ['ADU Ind'], values=['Owed_value', 'Owed_Imp', 'Equiv Units', 'Effective_ADU'], aggfunc=np.sum, fill_value=0, margins = True)
@@ -1883,6 +1887,7 @@ def get_report_values(liab):
     return (quar, (begin_liab, begin_imp_owed, begin_adu_req, cur_q_liab, cur_q_imp_owed , cur_q_adu_req, cur_q_liab_paid,\
 cur_q_imp_paid, cur_q_adu_given, cur_q_liab_paid_new, cur_q_imp_paid_new, cur_q_adu_given_new,\
 ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_new, ending_adu_req_new))
+
 
 
 from openpyxl.utils import get_column_letter
@@ -2225,7 +2230,7 @@ def main(Q_num = 1):
     print('Time for creating pivot table: ', t6-t5)
 
     print('Generating summary')
-    quar, report_values = get_report_values(liab_update)
+    quar, report_values = get_report_values(liab_update, four_q)
     get_summary(report_values, date_string, quar)
     t7 = time.time()
     print('Time for generating summary: ', t7-t6)
