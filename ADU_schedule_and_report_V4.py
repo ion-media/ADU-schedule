@@ -1418,10 +1418,287 @@ def format_forecast_actual(all_ratings, four_q):
     worksheet.set_column(fore_act_prev_p_delta + ':' + fore_act_prev_np_delta, None, fmt2)
     worksheet.set_column(fore_act_cur_p_delta + ':' + fore_act_cur_np_delta, None, fmt2)
 
-    worksheet.set_column(0, 2, 2) 
+    worksheet.set_column(0, 2, 2)
 
     writer.save()
     return s, s_letter, e_letter
+
+
+def format_ADU_notes(raw):
+
+    notes = pd.read_excel(DIR_INPUT + 'ADU Notes new.xlsx', sheets = 'Sheet1')
+    
+    notes = pd.merge(raw[1], notes, how='left')
+    notes = notes.sort_values('Guarantee ID')
+    notes = notes[['Notes']]
+
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' ADU Notes.xlsx', engine='xlsxwriter')
+    workbook = writer.book
+
+    # Set Font 
+    workbook.formats[0].set_font_name('Arial')
+
+    count_row = raw[1].shape[0] + 1  # gives number of row count
+    count_col = raw[1].shape[1] + 3  # gives number of col count
+    raw[1].to_excel(writer, sheet_name='ADU Notes', startrow=7, startcol=2, header=False, index = False)
+    
+    worksheet = writer.sheets['ADU Notes']
+    worksheet.set_zoom(85)
+
+    # Clean the headers
+    for col_num, value in enumerate(raw[1].columns.values):
+        if col_num <= 9:
+            worksheet.write(5, col_num + 2, value)
+        elif col_num <= 11:
+            worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
+        elif col_num <= 35:
+            worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
+        else:
+            worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
+
+    s = [] # stores the start column of each dataframe
+    e = [] # stores the end column of each dataframe
+    date_fmt = workbook.add_format({'num_format':'mm/dd/yyyy',
+                                    'font_name': 'Arial'})     
+    for i in range(2, len(raw)):
+        raw[i].iloc[:, 1:].to_excel(writer, sheet_name='ADU Notes', startrow=7, startcol=count_col, index=False,
+                                    header=False)
+        if i < 4:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                worksheet.write(5, count_col + col_num, value)
+        else:
+            for col_num, value in enumerate(raw[i].columns.values[1:]):
+                value = datetime.strptime(value, '%m/%d/%Y')
+                worksheet.write_datetime(5, count_col + col_num, value, date_fmt)
+        s.append(count_col)
+        for r in range(count_row):
+            for c in range(count_col, count_col):
+                worksheet.write_blank(r, c, None)
+
+        count_col += raw[i].shape[1]
+        e.append(count_col - 2)
+    s_letter = ['B'] #start column letter of each dataframe
+    e_letter = ['L'] #end column letter of each dataframe
+    for i in range(len(s)):
+        s_letter.append(xlsxwriter.utility.xl_col_to_name(s[i]))
+        e_letter.append(xlsxwriter.utility.xl_col_to_name(e[i]))
+
+    # sum of scheduled spots and ADUs
+    for i in range(len(e)):
+        col = xlsxwriter.utility.xl_col_to_name(e[i] + 1)
+        for r in range(8, count_row + 7):
+            worksheet.write_formula(col + str(r),
+                                    '{=SUM(' + s_letter[i + 1] + str(r) + ':' + e_letter[i + 1] + str(r) + ')}')
+   
+    # Deals not in flight
+    col = xlsxwriter.utility.xl_col_to_name(e[-1] + 2)
+    Total_P_ADU_col = xlsxwriter.utility.xl_col_to_name(e[2] + 1)
+    Total_NP_ADU_col = xlsxwriter.utility.xl_col_to_name(e[3] + 1)
+    Total_ADU_col = xlsxwriter.utility.xl_col_to_name(s[0] - 2)
+    for r in range(8, count_row + 7):
+        worksheet.write_formula(col + str(r), '{=' + Total_ADU_col + str(r) + '-' + Total_P_ADU_col + str(
+            r) + '-' + Total_NP_ADU_col + str(r) + '}')
+
+    # ADU Notes
+    notes.to_excel(writer, sheet_name='ADU Notes', startrow=7, startcol=e[-1]+3, header=False, index = False)
+
+        
+        
+    # Header
+    bold = workbook.add_format({'bold': True, 
+                                'font_name': 'Arial'})
+    worksheet.write(1, 2, 'ION Media', bold)
+    worksheet.write(2, 2, 'ADU Trust 3.0', bold)
+    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
+                                   'font_name': 'Arial'})
+    white = workbook.add_format({'font_color': 'white', 
+                                    'font_name': 'Arial'})
+    worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
+    worksheet.write(0, 3, raw[0], white)
+
+    
+    # Add Title & Merge
+    format_b = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
+    format_o = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFCC99',
+        'font_name': 'Arial'})
+    format_y = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFFFCC',
+        'font_name': 'Arial'})
+    format_g = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#C0C0C0',
+        'font_name': 'Arial'})  # grey
+
+    try:
+        #worksheet.merge_range('C4:I4', 'DEAL', format_g)
+        #worksheet.merge_range('C5:I5', ' ', format_g)
+        worksheet.merge_range(s_letter[3] + '4:' + e_letter[3] + '4', 'Prime - ADU Suggested Flighting', format_b)
+        worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', 'Non Prime - ADU Suggested Flighting', format_o)
+        worksheet.merge_range(s_letter[1] + '4:' + e_letter[1] + '4', 'Prime Fligting - Sold Units', format_b)
+        worksheet.merge_range(s_letter[2] + '4:' + e_letter[2] + '4', 'Non Prime Fligting - Sold Units', format_o)
+
+    except:
+        print('nope')
+
+
+    # Headers for dataframes
+    for i in range(2, 59):
+        if i <= 13:
+            worksheet.write(3, i, 'SOLD', format_g)
+            worksheet.write(4, i, ' ', format_g)
+        elif i <= 19:
+            worksheet.write(3, i, 'SOLD', format_b)
+            worksheet.write(4, i, 'Prime', format_b)
+        elif i <= 25:
+            worksheet.write(3, i, 'SOLD', format_o)
+            worksheet.write(4, i, 'NP', format_o)
+        elif i <= 31:
+            worksheet.write(3, i, 'ADU', format_b)
+            worksheet.write(4, i, 'Prime', format_b)
+        elif i <= 37:
+            worksheet.write(3, i, 'ADU', format_o)
+            worksheet.write(4, i, 'NP', format_o)
+        elif i <= 47:
+            worksheet.write(3, i, 'Total', format_g)
+            worksheet.write(4, i, ' ', format_g)
+        else:
+            worksheet.write(3, i, ' ', format_g)
+            if i != 58:
+                if i % 2 == 0:
+                    worksheet.write(4, i, 'P', format_g)
+                else:
+                    worksheet.write(4, i, 'NP', format_g)
+            else:
+                worksheet.write(4, i, 'Total', format_g)
+
+    for i in range(s[0], e[0] + 2):
+        worksheet.write(4, i, 'P', format_b)
+        if i == e[0] + 1:
+            worksheet.write(3, i, 'Total', format_b)
+    for i in range(s[1], e[1] + 2):
+        worksheet.write(4, i, 'NP', format_o)
+        if i == e[1] + 1:
+            worksheet.write(3, i, 'Total', format_o)
+    for i in range(s[2], e[2] + 2):
+        worksheet.write(4, i, 'P', format_b)
+        if i == e[2] + 1:
+            worksheet.write(3, i, 'Total', format_b)
+    for i in range(s[3], e[3] + 2):
+        worksheet.write(4, i, 'NP', format_o)
+        if i == e[3] + 1:
+            worksheet.write(3, i, 'Total', format_o)
+    worksheet.write(3, e[3] + 2, 'Deals', format_g)
+    worksheet.write(4, e[3] + 2, 'Not in', format_g)
+    worksheet.write(5, e[3] + 2, 'Flight', format_g)
+
+    worksheet.write(3, e[3] + 3, 'ADU', format_g)
+    worksheet.write(4, e[3] + 3, 'Notes', format_g)    
+    
+    # Group Columns
+    worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
+
+    
+    #worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
+
+    # Autofilter
+    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e[-1] + 2) + str(count_row+8))
+    
+
+    # Get the Sum
+    for col in range(s[0] - 4, e[3] + 3):
+        col = xlsxwriter.utility.xl_col_to_name(col)
+        worksheet.write_formula(col + str(count_row + 8),
+                                '{=subtotal(9, ' + col + '8:' + col + str(count_row + 6) + ')}')
+
+    # Conditional format for date
+    # Add a format. Light red fill with dark red text.
+    format1 = workbook.add_format({'bg_color': '#FFC7CE',
+                                   'font_color': '#9C0006', 
+                                   'font_name': 'Arial'})
+    # Add a format. Green fill with dark green text.
+    format2 = workbook.add_format({'bg_color': '#C6EFCE',
+                                   'font_color': '#006100', 
+                                   'font_name': 'Arial'})
+    format3 = workbook.add_format({'bg_color': 'white', 
+                                   'font_name': 'Arial'})
+
+    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6' , {'type': 'cell',
+                                                                          'criteria': '<',
+                                                                          'value': 'Datevalue($D$1)',
+                                                                          'format': format1})
+    worksheet.conditional_format(s_letter[3] + '6:' + e_letter[3] + '6', {'type': 'cell',
+                                                                          'criteria': '>=',
+                                                                          'value': 'Datevalue($D$1)',
+                                                                          'format': format2})
+    worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
+                                                                          'criteria': '<',
+                                                                          'value': 'Datevalue($D$1)',
+                                                                          'format': format1})
+    worksheet.conditional_format(s_letter[4] + '6:' + e_letter[4] + '6', {'type': 'cell',
+                                                                          'criteria': '>=',
+                                                                          'value': 'Datevalue($D$1)',
+                                                                          'format': format2})
+
+    # Column Width
+    worksheet.set_column('C' + ':' + e_letter[0], 15)
+    worksheet.set_column(0, 2, 2) 
+    worksheet.set_column(s_letter[3]+ ':' + e_letter[4], 10) 
+    worksheet.set_column('DN:DN', 40)
+
+
+    # Freeze the top rows and left columns
+    worksheet.freeze_panes(7, 12)
+
+    
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '0.00', 'font_name': 'Arial'})
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
+    
+    worksheet.set_column('O:S', None, fmt2)
+    worksheet.set_column('T:T', None, fmt1)
+    worksheet.set_column('U:Y', None, fmt2)
+    worksheet.set_column('Z:Z', None, fmt1)
+    worksheet.set_column('AA:AE', None, fmt2)
+    worksheet.set_column('AF:AF', None, fmt1)
+    worksheet.set_column('AG:AK', None, fmt2)
+    worksheet.set_column('AL:AL', None, fmt1)
+    worksheet.set_column('AM:AO', None, fmt2)
+    worksheet.set_column('AP:AP', None, fmt3)    
+    worksheet.set_column('AQ:AR', None, fmt2)
+    worksheet.set_column('AS:AS', None, fmt1)
+    worksheet.set_column('AT:AT', None, fmt2)
+    worksheet.set_column('AU:AV', None, fmt3)
+    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BA:BB', None, fmt3)
+    worksheet.set_column('BC:BD', None, fmt2)
+    worksheet.set_column('BE:BG', None, fmt4)
+    worksheet.set_column('BH:FL', None, fmt4)
+    
+    
+    writer.save()
+    return s, s_letter, e_letter
+
+
 
 
 
@@ -2219,6 +2496,7 @@ def main(Q_num = 1):
     format_df(sep[0], liab_update)
     format_take_back(sep[1], liab_update)
     format_cur_standing(raw[:2], liab_update)
+    format_ADU_notes(sep[0])
 
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
