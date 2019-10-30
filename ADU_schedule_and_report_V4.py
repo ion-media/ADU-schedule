@@ -1426,7 +1426,7 @@ def format_forecast_actual(all_ratings, four_q):
 
 def format_ADU_notes(raw):
 
-    notes = pd.read_excel(DIR_INPUT + 'ADU Notes new.xlsx', sheets = 'Sheet1')
+    notes = pd.read_excel(DIR_INPUT + 'ADU Notes.xlsx', sheets = 'Sheet1')
     
     notes = pd.merge(raw[1], notes, how='left')
     notes = notes.sort_values('Guarantee ID')
