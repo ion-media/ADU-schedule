@@ -39,6 +39,13 @@ NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movie
           'Late Night (M-S)', 'Morning (M-S)', 'Non-Prime ROS**', 'Non-Prime ROS*', 'Weekend Day (S-Sun)',\
           'Non-Prime (M-Su 11A-7P)','Non-Prime (M-Su 1A-3A)','Non-Prime (M-Su 7A-11A)','Non-Prime'])
 
+ADU_Pmix_low = 0.25
+ADU_Pmix_high = 0.95
+ADU_Pmix_shift = 0.2
+
+delv_perc_bar = 0.99
+more_units_perc = 0.1
+
 # Compare dates
 def date_comparison(date1, date2):
     date1 = parse(str(date1))
@@ -163,13 +170,16 @@ class GID:
         self.Total['P Mix %'] = self.Sold_P['Deal Imp'] / self.Total['Deal Imp'] if self.Total['Deal Imp'] else 0
         self.Total['NP Mix %'] = 1 - self.Total['P Mix %']
 
+        self.Adj_P_ADU, self.Adj_NP_ADU = Adjust_ADU_P_Mixture(self.Total['P Mix %'], self.Total['Delv Imp'])
+        
+        
         self.P['Guar'] = self.Sold_P['Deal Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
-        self.P['ADUs'] = round(self.Total['P Mix %'] * self.Total['Imps Owed'] / self.P['Forecast Imp'])
+        self.P['ADUs'] = round(self.Adj_P_ADU * self.Total['Imps Owed'] / self.P['Forecast Imp'])
         self.P['Est'] = self.Sold_P['Delv Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round(self.Total['NP Mix %'] * self.Total['Imps Owed'] / self.NP['Forecast Imp'])
+        self.NP['ADUs'] = round(self.Adj_NP_ADU * self.Total['Imps Owed'] / self.NP['Forecast Imp'])
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -180,6 +190,20 @@ class GID:
         return [self.GName, self.DealNum, self.Marketplace, self.Advertiser, \
              self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate, self.DealYear] \
              + [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
+
+    
+def Adjust_ADU_P_Mixture(P_mix, Delv_perc):
+    if P_mix >= ADU_Pmix_high or P_mix <=ADU_Pmix_low:
+        adj_P_mix = P_mix
+    else:
+        adj_P_mix = max(ADU_Pmix_low, P_mix - ADU_Pmix_shift)
+    adj_NP_mix = 1-adj_P_mix
+    
+    if Delv_perc >= delv_perc_bar and Delv_perc < 1:
+        adj_P_mix += more_units_perc
+        adj_NP_mix += more_units_perc
+        
+    return adj_P_mix, adj_NP_mix
 
 
 def get_dict(df, ratings, endq):
