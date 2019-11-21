@@ -179,7 +179,7 @@ class GID:
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round(self.Adj_NP_ADU * self.Total['Imps Owed'] / self.NP['Forecast Imp'])
+        self.NP['ADUs'] = round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp'])
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
