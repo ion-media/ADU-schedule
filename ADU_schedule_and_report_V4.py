@@ -27,12 +27,12 @@ from openpyxl.utils import get_column_letter
 
 
 # Global parameter
-DIR_INPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
-#DIR_INPUT='C:/ION/Commercial/ADU_Report/V2/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
-#DIR_OUTPUT='C:/ION/Commercial/ADU_Report/V2/Test/'
+DIR_INPUT  ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
+#DIR_INPUT ='C:/ION/Commercial/ADU_Report/V2/'
+#DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
+DIR_OUTPUT ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
-DIR_REPORT='//ion.media/shared/1 Commercial/! IM 3.0/2 Control 2/'
+DIR_REPORT ='//ion.media/shared/1 Commercial/! IM 3.0/2 Control 2/'
 #DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM',"Valentine's Day Movie (Prime)"])
 NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movies (Non Prime)', \
@@ -41,10 +41,10 @@ NP = set(['Daytime (M-F)', 'Early Morning (M-S)', 'Fringe (M-S)', 'Holiday Movie
 
 ADU_Pmix_low = 0.25
 ADU_Pmix_high = 0.95
-ADU_Pmix_shift = 0.2
+ADU_Pmix_shift = 0.0
 
 delv_perc_bar = 0.99
-more_units_perc = 0.1
+more_units_perc = 0.0
 
 # Compare dates
 def date_comparison(date1, date2):
@@ -170,8 +170,11 @@ class GID:
         self.Total['P Mix %'] = self.Sold_P['Deal Imp'] / self.Total['Deal Imp'] if self.Total['Deal Imp'] else 0
         self.Total['NP Mix %'] = 1 - self.Total['P Mix %']
 
-        self.Adj_P_ADU, self.Adj_NP_ADU = Adjust_ADU_P_Mixture(self.Total['P Mix %'], self.Total['Delv Imp'])
-        
+        self.Adj_P_ADU, self.Adj_NP_ADU = Adjust_ADU_P_Mixture(self.Total['P Mix %'])
+        NP_more_units_perc =1.0
+        if self.Total['% Delv'] >= delv_perc_bar:
+          NP_more_units_perc = 1.0+more_units_perc
+          
         
         self.P['Guar'] = self.Sold_P['Deal Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
         self.P['ADUs'] = round(self.Adj_P_ADU * self.Total['Imps Owed'] / self.P['Forecast Imp'])
@@ -179,7 +182,7 @@ class GID:
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp'])
+        self.NP['ADUs'] = round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc)
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -192,17 +195,13 @@ class GID:
              + [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
 
     
-def Adjust_ADU_P_Mixture(P_mix, Delv_perc):
-    if P_mix >= ADU_Pmix_high or P_mix <=ADU_Pmix_low:
+def Adjust_ADU_P_Mixture(P_mix):
+    if P_mix >= ADU_Pmix_high or P_mix <= ADU_Pmix_low:
         adj_P_mix = P_mix
     else:
         adj_P_mix = max(ADU_Pmix_low, P_mix - ADU_Pmix_shift)
     adj_NP_mix = 1-adj_P_mix
-    
-    if Delv_perc >= delv_perc_bar and Delv_perc < 1:
-        adj_P_mix += more_units_perc
-        adj_NP_mix += more_units_perc
-        
+           
     return adj_P_mix, adj_NP_mix
 
 
@@ -2499,7 +2498,7 @@ def main(Q_num = 1):
     print('Time for reading files: ', t2 - t1)
 
     print("Keep a copy of raw zip file")
-    copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
+    #copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
 
     print('Scheduling ADU and generating new data')
     raw = raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, endq)
@@ -2546,7 +2545,7 @@ def main(Q_num = 1):
     combine_xlsx_files()
     print('Done')
 
-    copy_to_reports()
+    #copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
 
