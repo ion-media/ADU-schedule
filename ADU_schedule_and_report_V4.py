@@ -29,8 +29,8 @@ from openpyxl.utils import get_column_letter
 # Global parameter
 DIR_INPUT  ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
 #DIR_INPUT ='C:/ION/Commercial/ADU_Report/V2/'
-#DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
-DIR_OUTPUT ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
+DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
+#DIR_OUTPUT ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT ='//ion.media/shared/1 Commercial/! IM 3.0/2 Control 2/'
 #DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
@@ -2498,7 +2498,7 @@ def main(Q_num = 1):
     print('Time for reading files: ', t2 - t1)
 
     print("Keep a copy of raw zip file")
-    #copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
+    copy_rename('Dealmaker BI weekly reports.zip', str(datetime.now().strftime("%Y-%m-%d")) + ' Dealmaker BI weekly reports.zip')
 
     print('Scheduling ADU and generating new data')
     raw = raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, endq)
@@ -2545,7 +2545,7 @@ def main(Q_num = 1):
     combine_xlsx_files()
     print('Done')
 
-    #copy_to_reports()
+    copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
 
