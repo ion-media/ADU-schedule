@@ -173,7 +173,7 @@ class GID:
         self.Adj_P_ADU, self.Adj_NP_ADU = Adjust_ADU_P_Mixture(self.Total['P Mix %'])
         NP_more_units_perc =1.0
         if self.Total['% Delv'] >= delv_perc_bar:
-          NP_more_units_perc = 1.0+more_units_perc
+            NP_more_units_perc = 1.0+more_units_perc
           
         
         self.P['Guar'] = self.Sold_P['Deal Imp'] / self.Sold_P['Units'] if self.Sold_P['Units'] else 0
@@ -182,7 +182,7 @@ class GID:
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] = round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc)
+        self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -1722,6 +1722,84 @@ def format_ADU_notes(raw):
     return s, s_letter, e_letter
 
 
+def format_liability_qtr_report(date, report_df):
+    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Liability Report.xlsx', engine='xlsxwriter')#, datetime_format='%m/%d/%Y')
+    workbook = writer.book
+
+    # Set Font 
+    workbook.formats[0].set_font_name('Arial')
+   
+    report_df.to_excel(writer, sheet_name='Liability Report', startrow=7, startcol=2, header=False, index = False)
+
+    worksheet = writer.sheets['Liability Report']
+    worksheet.set_zoom(85)
+
+    # Header
+    bold = workbook.add_format({'bold': True, 
+                                'font_name': 'Arial'})
+    worksheet.write(1, 2, 'ION Media', bold)
+    worksheet.write(2, 2, 'ADU Trust 3.0', bold)
+    bold_blue = workbook.add_format({'bold': True, 'font_color': 'blue', 
+                                   'font_name': 'Arial'})
+    white = workbook.add_format({'font_color': 'white', 
+                                    'font_name': 'Arial'})
+    worksheet.write(0, 2, str(datetime.now().strftime("%m/%d/%Y")), bold_blue)
+    worksheet.write(0, 3, date, white)
+
+    s = 2
+    e = 2 + len(report_df.columns)
+
+    # Add Title & Merge
+    format_b = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
+    format_o = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFCC99', 
+        'font_name': 'Arial'})
+    format_y = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFFFCC', 
+        'font_name': 'Arial'})
+    format_g = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#C0C0C0', 
+        'font_name': 'Arial'})  # grey
+    
+
+    # Headers for dataframes
+    for i in range(s, e):
+        worksheet.write(6, i, report_df.columns[i-2], format_g)
+          
+    a = xlsxwriter.utility.xl_col_to_name(e-4)
+    worksheet.set_column('J:'+a, None, None, {'level': 1, 'hidden': 1})
+
+    # Autofilter
+    worksheet.autofilter('A7:' + xlsxwriter.utility.xl_col_to_name(e-1) + str(len(report_df)+7))
+       
+    # Column Width
+    worksheet.set_column('C' + ':' + xlsxwriter.utility.xl_col_to_name(e), 15)
+    worksheet.set_column(0, 2, 2) 
+
+    # freeze the top rows and left columns
+    worksheet.freeze_panes(7, 9)
+
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+    worksheet.set_column('J:'+a, None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column(a + ':' + xlsxwriter.utility.xl_col_to_name(e), None, fmt1)
+
+    writer.save()
+    return 
 
 
 
@@ -2397,7 +2475,9 @@ def combine_xlsx_files():
     f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Delivery.xlsx'
     f4 = DIR_OUTPUT + 'Summary.xlsx'
     f5 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
-    
+    f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Notes.xlsx'
+    f7 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Liability Report.xlsx'
+
     wb_comb = xw.Book(f1)
     
     print('Combining ADUs to delete')
@@ -2429,11 +2509,24 @@ def combine_xlsx_files():
     
     print('Saving file')
     wb_comb.save()
-    wb_comb.app.quit()
+    wb_comb.close()
+
+
+    print('Combining ADU notes and Quarterly Liability Report')
+    wb_comb_notes = xw.Book(f6)
+    wb7 = xw.Book(f7)
+    ws7 = wb7.sheets('Liability Report')
+    ws7.api.Copy(After = wb_comb_notes.sheets('ADU Notes').api)
+    wb7.close()
+    wb_comb_notes.save()
+    wb_comb_notes.close()
+
+    #wb_comb.app.quit()
     os.remove(f2)
     os.remove(f3)
     os.remove(f4)
     os.remove(f5)
+    os.remove(f7)
     
     return
 
@@ -2467,6 +2560,36 @@ def forecast_actual(df, internal_estimates, four_q):
         res.append(temp)
     return res
 
+def liability_qtr_report(basic, liab_update):
+    quar = sorted(liab_update['Year + Quarter'].unique())
+    #liab_update['DealName_Linked'] = liab_update['Guarantee Name'].fillna(liab_update['Deal Name'])
+    pvt = pd.pivot_table(liab_update[liab_update['In System']=='Y'], \
+                         index = 'Guarantee ID',\
+                         columns = 'Year + Quarter', \
+                         values=['Primary Demo Equiv Post Imp', 'Primary Demo Non-ADU Equiv Deal Imp'], \
+                         aggfunc=np.sum, fill_value=0, margins = True)
+
+    total_delv_imp = 0
+    total_guar_imp = 0
+    for yq in quar:
+        pvt[yq + ' Delv %'] = pvt['Primary Demo Equiv Post Imp'][yq] / pvt['Primary Demo Non-ADU Equiv Deal Imp'][yq]
+        total_delv_imp += pvt['Primary Demo Equiv Post Imp'][yq]
+        total_guar_imp += pvt['Primary Demo Non-ADU Equiv Deal Imp'][yq]
+        
+    pvt['Total Delv %'] = total_delv_imp / total_guar_imp
+    pvt = pvt.replace([np.inf, -np.inf], 'ADU Only')
+    
+    pvt = pvt.reset_index()
+    del pvt['Primary Demo Equiv Post Imp']
+    del pvt['Primary Demo Non-ADU Equiv Deal Imp']
+    
+    pvt.columns = pvt.columns.get_level_values(0)
+    pvt = pvt.fillna(0)
+    
+    basic_info = basic[['Guarantee ID', 'Deal ID','Guarantee Name', 'Deal Year', 'Advertiser','AE Name', 'Agency']]
+    report_df = pd.merge(basic_info, pvt, on = 'Guarantee ID')
+    
+    return report_df 
 
 
 def main(Q_num = 1):
@@ -2510,6 +2633,7 @@ def main(Q_num = 1):
     print('Calculating liability')
     liab = liability(new)
     liab_update = calc_units(liab, raw)
+    report_df = liability_qtr_report(raw[1], liab_update)
 
     t4 = time.time()
     print('Time for computing liability: ', t4 - t3)
@@ -2520,6 +2644,7 @@ def main(Q_num = 1):
     format_take_back(sep[1], liab_update)
     format_cur_standing(raw[:2], liab_update)
     format_ADU_notes(sep[0])
+    format_liability_qtr_report(raw[0], report_df)
 
     t5 = time.time()
     print('Time for exporting ADU schedule: ', t5 - t4)
