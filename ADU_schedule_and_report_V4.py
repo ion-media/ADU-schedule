@@ -2521,7 +2521,7 @@ def combine_xlsx_files():
     wb_comb_notes.save()
     wb_comb_notes.close()
 
-    #wb_comb.app.quit()
+    wb_comb.app.quit()
     os.remove(f2)
     os.remove(f3)
     os.remove(f4)
