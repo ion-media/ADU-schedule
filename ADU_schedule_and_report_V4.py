@@ -2511,7 +2511,6 @@ def combine_xlsx_files():
     wb_comb.save()
     wb_comb.close()
 
-
     print('Combining ADU notes and Quarterly Liability Report')
     wb_comb_notes = xw.Book(f6)
     wb7 = xw.Book(f7)
@@ -2519,9 +2518,8 @@ def combine_xlsx_files():
     ws7.api.Copy(After = wb_comb_notes.sheets('ADU Notes').api)
     wb7.close()
     wb_comb_notes.save()
-    wb_comb_notes.close()
+    wb_comb_notes.app.quit()
 
-    wb_comb.app.quit()
     os.remove(f2)
     os.remove(f3)
     os.remove(f4)
@@ -2562,7 +2560,7 @@ def forecast_actual(df, internal_estimates, four_q):
 
 def liability_qtr_report(basic, liab_update, cur_q):
     quar = sorted(liab_update['Year + Quarter'].unique())
-    ind = quar.index(str(four_q[1][1]) + ' ' + four_q[1][0] + 'Q')
+    ind = quar.index(str(cur_q[1]) + ' ' + cur_q[0] + 'Q')
     quar = quar[:ind+1]
     
     #liab_update['DealName_Linked'] = liab_update['Guarantee Name'].fillna(liab_update['Deal Name'])
