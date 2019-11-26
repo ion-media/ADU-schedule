@@ -2509,7 +2509,7 @@ def combine_xlsx_files():
     
     print('Saving file')
     wb_comb.save()
-    wb_comb.close()
+    #wb_comb.close()
 
     print('Combining ADU notes and Quarterly Liability Report')
     wb_comb_notes = xw.Book(f6)
