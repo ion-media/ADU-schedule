@@ -2560,8 +2560,11 @@ def forecast_actual(df, internal_estimates, four_q):
         res.append(temp)
     return res
 
-def liability_qtr_report(basic, liab_update):
+def liability_qtr_report(basic, liab_update, cur_q):
     quar = sorted(liab_update['Year + Quarter'].unique())
+    ind = quar.index(str(four_q[1][1]) + ' ' + four_q[1][0] + 'Q')
+    quar = quar[:ind+1]
+    
     #liab_update['DealName_Linked'] = liab_update['Guarantee Name'].fillna(liab_update['Deal Name'])
     pvt = pd.pivot_table(liab_update[liab_update['In System']=='Y'], \
                          index = 'Guarantee ID',\
@@ -2590,6 +2593,7 @@ def liability_qtr_report(basic, liab_update):
     report_df = pd.merge(basic_info, pvt, on = 'Guarantee ID')
     
     return report_df 
+
 
 
 def main(Q_num = 1):
@@ -2633,7 +2637,7 @@ def main(Q_num = 1):
     print('Calculating liability')
     liab = liability(new)
     liab_update = calc_units(liab, raw)
-    report_df = liability_qtr_report(raw[1], liab_update)
+    report_df = liability_qtr_report(raw[1], liab_update, four_q[1])
 
     t4 = time.time()
     print('Time for computing liability: ', t4 - t3)
