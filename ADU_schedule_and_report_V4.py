@@ -30,7 +30,7 @@ from openpyxl.utils import get_column_letter
 DIR_INPUT  ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
 #DIR_INPUT ='C:/ION/Commercial/ADU_Report/V2/'
 DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
-#DIR_OUTPUT ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_test/'
+#DIR_OUTPUT ='C:/ION/Commercial/ADU_Report/V2/'
 DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT ='//ion.media/shared/1 Commercial/! IM 3.0/2 Control 2/'
 #DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
@@ -105,6 +105,9 @@ class GID:
         self.StartDate = self.row['Week Start Date']
         self.EndDate = self.row['Week End Date']
         self.DealYear = self.row['Deal Year']
+        self.DealFlightStart = self.row['Deal Flight Start Date']
+        self.DealFlightEnd = self.row['Deal Flight End Date']
+        
 
         # forecast ratings
         try:
@@ -126,6 +129,12 @@ class GID:
             self.StartDate = r['Week Start Date']
         if date_comparison(self.EndDate, r['Week End Date']):
             self.EndDate = r['Week End Date']
+        
+        if not date_comparison(self.DealFlightStart, r['Deal Flight Start Date']):
+            self.DealFlightStart = r['Deal Flight Start Date']
+        if date_comparison(self.DealFlightEnd, r['Deal Flight End Date']):
+            self.DealFlightEnd = r['Deal Flight End Date']
+            
         self.update_by_daypart(r)
 
 
@@ -191,7 +200,8 @@ class GID:
 
     def GID_to_List(self):
         return [self.GName, self.DealNum, self.Marketplace, self.Advertiser, \
-             self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, self.EndDate, self.DealYear] \
+                self.AEName, self.Agency, self.DealName, self.SoldDemo, self.StartDate, \
+                self.EndDate, self.DealYear, self.DealFlightStart, self.DealFlightEnd] \
              + [self.Sold_P, self.Sold_NP, self.ADU_P, self.ADU_NP, self.Total, self.P, self.NP]
 
     
@@ -227,6 +237,7 @@ def form_df(result):
     column_names = ['Guarantee ID', 'Guarantee Name', 'Deal ID', 'Marketplace',\
                     'Advertiser', \
                     'AE Name', 'Agency', 'Deal Name', 'Primary Demo', 'Sold Start Date', 'Sold End Date', 'Deal Year',\
+                    'Deal Flight Start Date', 'Deal Flight End Date',\
                     'Sold Prime Booked $', 'Sold Prime Deal Imp', 'Sold Prime Delv Imp', 'Sold Prime Imps Owed',
                     'Sold Prime Units', \
                     'Sold Prime CPM', 'Sold NP Booked $', 'Sold NP Deal Imp', 'Sold NP Delv Imp', 'Sold NP Imps Owed', \
@@ -269,6 +280,7 @@ def form_df(result):
     output = output[['Deal ID', 'Guarantee ID', 'Guarantee Name', 'Marketplace', \
                      'Advertiser', \
                      'AE Name', 'Agency', 'Deal Name','Deal Year', 'Primary Demo', 'Sold Start Date', 'Sold End Date',  \
+                     'Deal Flight Start Date', 'Deal Flight End Date',\
                      'Sold Prime Booked $', 'Sold Prime Deal Imp', 'Sold Prime Delv Imp', 'Sold Prime Imps Owed',
                      'Sold Prime Units', \
                      'Sold Prime CPM', 'Sold NP Booked $', 'Sold NP Deal Imp', 'Sold NP Delv Imp', 'Sold NP Imps Owed', \
@@ -531,9 +543,9 @@ def format_df(raw, new):
     for col_num, value in enumerate(raw[1].columns.values):
         if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 11:
+        elif col_num <= 13:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 35:
+        elif col_num <= 37:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
@@ -633,28 +645,28 @@ def format_df(raw, new):
 
 
     # Headers for dataframes
-    for i in range(2, 59):
-        if i <= 13:
+    for i in range(2, 61):
+        if i <= 15:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 19:
+        elif i <= 21:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 25:
+        elif i <= 27:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 31:
+        elif i <= 33:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 37:
+        elif i <= 39:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 47:
+        elif i <= 49:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 58:
+            if i != 60:
                 if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
@@ -685,9 +697,9 @@ def format_df(raw, new):
     # Group Columns
     worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
     worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:Q', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AY:BB', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BK:CL', None, None, {'level': 1, 'hidden': 1})
 
     
     #worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
@@ -747,25 +759,25 @@ def format_df(raw, new):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('O:S', None, fmt2)
-    worksheet.set_column('T:T', None, fmt1)
-    worksheet.set_column('U:Y', None, fmt2)
-    worksheet.set_column('Z:Z', None, fmt1)
-    worksheet.set_column('AA:AE', None, fmt2)
-    worksheet.set_column('AF:AF', None, fmt1)
-    worksheet.set_column('AG:AK', None, fmt2)
-    worksheet.set_column('AL:AL', None, fmt1)
-    worksheet.set_column('AM:AO', None, fmt2)
-    worksheet.set_column('AP:AP', None, fmt3)    
-    worksheet.set_column('AQ:AR', None, fmt2)
-    worksheet.set_column('AS:AS', None, fmt1)
-    worksheet.set_column('AT:AT', None, fmt2)
-    worksheet.set_column('AU:AV', None, fmt3)
-    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BA:BB', None, fmt3)
-    worksheet.set_column('BC:BD', None, fmt2)
-    worksheet.set_column('BE:BG', None, fmt4)
-    worksheet.set_column('BH:FL', None, fmt4)
+    worksheet.set_column('Q:U', None, fmt2)
+    worksheet.set_column('V:V', None, fmt1)
+    worksheet.set_column('W:Z', None, fmt2)
+    worksheet.set_column('AB:AB', None, fmt1)
+    worksheet.set_column('AC:AG', None, fmt2)
+    worksheet.set_column('AH:AH', None, fmt1)
+    worksheet.set_column('AI:AM', None, fmt2)
+    worksheet.set_column('AN:AN', None, fmt1)
+    worksheet.set_column('AO:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt3)    
+    worksheet.set_column('AS:AT', None, fmt2)
+    worksheet.set_column('AU:AU', None, fmt1)
+    worksheet.set_column('AV:AV', None, fmt2)
+    worksheet.set_column('AW:AX', None, fmt3)
+    worksheet.set_column('AY:BB', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BC:BD', None, fmt3)
+    worksheet.set_column('BE:BF', None, fmt2)
+    worksheet.set_column('BG:BI', None, fmt4)
+    worksheet.set_column('BJ:FN', None, fmt4)
     
     
     writer.save()
@@ -793,9 +805,9 @@ def format_take_back(raw, new):
     for col_num, value in enumerate(raw[1].columns.values):
         if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 11:
+        elif col_num <= 13:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 35:
+        elif col_num <= 37:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
@@ -900,28 +912,28 @@ def format_take_back(raw, new):
         print('nope')
 
     # Headers for dataframes
-    for i in range(2, 59):
-        if i <= 13:
+    for i in range(2, 61):
+        if i <= 15:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 19:
+        elif i <= 21:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 25:
+        elif i <= 27:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 31:
+        elif i <= 33:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 37:
+        elif i <= 39:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 47:
+        elif i <= 49:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 58:
+            if i != 60:
                 if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
@@ -959,9 +971,9 @@ def format_take_back(raw, new):
     # Group Columns
     worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
     worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:Q', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AY:BB', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BK:CL', None, None, {'level': 1, 'hidden': 1})
 
 
     # Autofilter
@@ -1020,26 +1032,25 @@ def format_take_back(raw, new):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('O:S', None, fmt2)
-    worksheet.set_column('T:T', None, fmt1)
-    worksheet.set_column('U:Y', None, fmt2)
-    worksheet.set_column('Z:Z', None, fmt1)
-    worksheet.set_column('AA:AE', None, fmt2)
-    worksheet.set_column('AF:AF', None, fmt1)
-    worksheet.set_column('AG:AK', None, fmt2)
-    worksheet.set_column('AL:AL', None, fmt1)
-    worksheet.set_column('AM:AO', None, fmt2)
-    worksheet.set_column('AP:AP', None, fmt3)    
-    worksheet.set_column('AQ:AR', None, fmt2)
-    worksheet.set_column('AS:AS', None, fmt1)
-    worksheet.set_column('AT:AT', None, fmt2)
-    worksheet.set_column('AU:AV', None, fmt3)
-    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BA:BB', None, fmt3)
-    worksheet.set_column('BC:BD', None, fmt2)
-    worksheet.set_column('BE:BG', None, fmt4)
-    worksheet.set_column('BH:FL', None, fmt4)
-    
+    worksheet.set_column('Q:U', None, fmt2)
+    worksheet.set_column('V:V', None, fmt1)
+    worksheet.set_column('W:Z', None, fmt2)
+    worksheet.set_column('AB:AB', None, fmt1)
+    worksheet.set_column('AC:AG', None, fmt2)
+    worksheet.set_column('AH:AH', None, fmt1)
+    worksheet.set_column('AI:AM', None, fmt2)
+    worksheet.set_column('AN:AN', None, fmt1)
+    worksheet.set_column('AO:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt3)    
+    worksheet.set_column('AS:AT', None, fmt2)
+    worksheet.set_column('AU:AU', None, fmt1)
+    worksheet.set_column('AV:AV', None, fmt2)
+    worksheet.set_column('AW:AX', None, fmt3)
+    worksheet.set_column('AY:BB', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BC:BD', None, fmt3)
+    worksheet.set_column('BE:BF', None, fmt2)
+    worksheet.set_column('BG:BI', None, fmt4)
+    worksheet.set_column('BJ:FN', None, fmt4)
 
     writer.save()
     return s, s_letter, e_letter
@@ -1061,15 +1072,15 @@ def format_cur_standing(raw, new):
     for col_num, value in enumerate(raw[1].columns.values):
         if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 11:
+        elif col_num <= 13:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 35:
+        elif col_num <= 37:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
 
     s = [3]
-    e = [58]
+    e = [60]
     s_letter = ['B'] #start column letter of each dataframe
     e_letter = ['L'] #end column letter of each dataframe
     for i in range(len(s)):
@@ -1118,28 +1129,28 @@ def format_cur_standing(raw, new):
 
 
     # Headers for dataframes
-    for i in range(2, 59):
-        if i <= 13:
+    for i in range(2, 61):
+        if i <= 15:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 19:
+        elif i <= 21:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 25:
+        elif i <= 27:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 31:
+        elif i <= 33:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 37:
+        elif i <= 39:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 47:
+        elif i <= 49:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 58:
+            if i != 60:
                 if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
@@ -1237,31 +1248,31 @@ def format_cur_standing(raw, new):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('O:S', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('T:T', None, fmt1, {'level': 1, 'hidden': 1})
-    worksheet.set_column('U:Y', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('Z:Z', None, fmt1, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AA:AE', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AF:AF', None, fmt1, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AG:AK', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AL:AL', None, fmt1, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AM:AO', None, fmt2)
-    worksheet.set_column('AP:AP', None, fmt3)    
-    worksheet.set_column('AQ:AR', None, fmt2)
-    worksheet.set_column('AS:AS', None, fmt1)
-    worksheet.set_column('AT:AT', None, fmt2)
-    worksheet.set_column('AU:AV', None, fmt3)
-    worksheet.set_column('AW:AZ', None, fmt2)
-    worksheet.set_column('BA:BB', None, fmt3)
-    worksheet.set_column('BC:BD', None, fmt2)
-    worksheet.set_column('BE:BG', None, fmt4)
-    worksheet.set_column('BH:BM', None, fmt4, {'level': 1, 'hidden': 1})
+    worksheet.set_column('Q:U', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('V:V', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('W:Z', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AB:AB', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AC:AG', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AH:AH', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AI:AM', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AN:AN', None, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AO:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt3)    
+    worksheet.set_column('AS:AT', None, fmt2)
+    worksheet.set_column('AU:AU', None, fmt1)
+    worksheet.set_column('AV:AV', None, fmt2)
+    worksheet.set_column('AW:AX', None, fmt3)
+    worksheet.set_column('AY:BB', None, fmt2)
+    worksheet.set_column('BC:BD', None, fmt3)
+    worksheet.set_column('BE:BF', None, fmt2)
+    worksheet.set_column('BG:BI', None, fmt4)
+    worksheet.set_column('BJ:BP', None, fmt4, {'level': 1, 'hidden': 1})
     
     
     # Add pivot table name
     format_w = workbook.add_format({'font_color': 'white', 'font_name': 'Arial'})
     
-    for c in range(2, 65):
+    for c in range(2, 67):
         col = xlsxwriter.utility.xl_col_to_name(c)
         worksheet.write_formula(col + '7', '{=CONCATENATE(' + col + '4, '+col + '5, '+col+'6)}', format_w)      
     
@@ -1472,9 +1483,9 @@ def format_ADU_notes(raw):
     for col_num, value in enumerate(raw[1].columns.values):
         if col_num <= 9:
             worksheet.write(5, col_num + 2, value)
-        elif col_num <= 11:
+        elif col_num <= 13:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
-        elif col_num <= 35:
+        elif col_num <= 37:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[2:]))
         else:
             worksheet.write(5, col_num + 2, ' '.join(value.split()[1:]))
@@ -1579,34 +1590,35 @@ def format_ADU_notes(raw):
 
 
     # Headers for dataframes
-    for i in range(2, 59):
-        if i <= 13:
+    for i in range(2, 61):
+        if i <= 15:
             worksheet.write(3, i, 'SOLD', format_g)
             worksheet.write(4, i, ' ', format_g)
-        elif i <= 19:
+        elif i <= 21:
             worksheet.write(3, i, 'SOLD', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 25:
+        elif i <= 27:
             worksheet.write(3, i, 'SOLD', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 31:
+        elif i <= 33:
             worksheet.write(3, i, 'ADU', format_b)
             worksheet.write(4, i, 'Prime', format_b)
-        elif i <= 37:
+        elif i <= 39:
             worksheet.write(3, i, 'ADU', format_o)
             worksheet.write(4, i, 'NP', format_o)
-        elif i <= 47:
+        elif i <= 49:
             worksheet.write(3, i, 'Total', format_g)
             worksheet.write(4, i, ' ', format_g)
         else:
             worksheet.write(3, i, ' ', format_g)
-            if i != 58:
+            if i != 60:
                 if i % 2 == 0:
                     worksheet.write(4, i, 'P', format_g)
                 else:
                     worksheet.write(4, i, 'NP', format_g)
             else:
                 worksheet.write(4, i, 'Total', format_g)
+
 
     for i in range(s[0], e[0] + 2):
         worksheet.write(4, i, 'P', format_b)
@@ -1634,9 +1646,9 @@ def format_ADU_notes(raw):
     # Group Columns
     worksheet.set_column('D:F', None, None, {'level': 1, 'hidden': 1})
     worksheet.set_column('H:I', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('M:O', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('AW:AZ', None, None, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BI:DJ', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:Q', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('AY:BB', None, None, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BK:CL', None, None, {'level': 1, 'hidden': 1})
 
     
     #worksheet.set_column(s_letter[1] + ':' + xlsxwriter.utility.xl_col_to_name(e[1] + 1), None, None, {'level': 1})
@@ -1697,25 +1709,25 @@ def format_ADU_notes(raw):
     fmt3 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
     fmt4 = workbook.add_format({'num_format': '0.0', 'font_name': 'Arial'})
     
-    worksheet.set_column('O:S', None, fmt2)
-    worksheet.set_column('T:T', None, fmt1)
-    worksheet.set_column('U:Y', None, fmt2)
-    worksheet.set_column('Z:Z', None, fmt1)
-    worksheet.set_column('AA:AE', None, fmt2)
-    worksheet.set_column('AF:AF', None, fmt1)
-    worksheet.set_column('AG:AK', None, fmt2)
-    worksheet.set_column('AL:AL', None, fmt1)
-    worksheet.set_column('AM:AO', None, fmt2)
-    worksheet.set_column('AP:AP', None, fmt3)    
-    worksheet.set_column('AQ:AR', None, fmt2)
-    worksheet.set_column('AS:AS', None, fmt1)
-    worksheet.set_column('AT:AT', None, fmt2)
-    worksheet.set_column('AU:AV', None, fmt3)
-    worksheet.set_column('AW:AZ', None, fmt2, {'level': 1, 'hidden': 1})
-    worksheet.set_column('BA:BB', None, fmt3)
-    worksheet.set_column('BC:BD', None, fmt2)
-    worksheet.set_column('BE:BG', None, fmt4)
-    worksheet.set_column('BH:FL', None, fmt4)
+    worksheet.set_column('Q:U', None, fmt2)
+    worksheet.set_column('V:V', None, fmt1)
+    worksheet.set_column('W:Z', None, fmt2)
+    worksheet.set_column('AB:AB', None, fmt1)
+    worksheet.set_column('AC:AG', None, fmt2)
+    worksheet.set_column('AH:AH', None, fmt1)
+    worksheet.set_column('AI:AM', None, fmt2)
+    worksheet.set_column('AN:AN', None, fmt1)
+    worksheet.set_column('AO:AQ', None, fmt2)
+    worksheet.set_column('AR:AR', None, fmt3)    
+    worksheet.set_column('AS:AT', None, fmt2)
+    worksheet.set_column('AU:AU', None, fmt1)
+    worksheet.set_column('AV:AV', None, fmt2)
+    worksheet.set_column('AW:AX', None, fmt3)
+    worksheet.set_column('AY:BB', None, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('BC:BD', None, fmt3)
+    worksheet.set_column('BE:BF', None, fmt2)
+    worksheet.set_column('BG:BI', None, fmt4)
+    worksheet.set_column('BJ:FN', None, fmt4)
     
     
     writer.save()
@@ -2675,5 +2687,7 @@ def main(Q_num = 1):
     copy_to_reports()
     print('Total Time: ', t8 - t1)
     return
+
+
 
 main()
