@@ -304,7 +304,7 @@ def week_range(startdate, enddate):
 def find_quarters(quarters, startdate):
     mon = pd.date_range(startdate, periods=1, freq='W-MON').strftime('%m/%d/%Y').tolist()[0]
     current_q = quarters.loc[quarters['start_date'].astype(str) == mon, 'quarter'].iloc[0][1]
-    current_year = startdate.year
+    current_year = int(quarters.loc[quarters['start_date'].astype(str) == mon, 'year'].iloc[0])
     current = (current_q, current_year)
 
     prev = (str(int(current_q) - 1), current_year)
