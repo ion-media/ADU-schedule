@@ -2541,10 +2541,10 @@ def combine_xlsx_files():
     return
 
 def copy_to_reports():
-    file_names = [fn for fn in os.listdir(DIR_REPORT) if fn.startswith('YM -- 1 ION ADU 3.0 (Arjun) -- ')]
+    file_names = [fn for fn in os.listdir(DIR_REPORT) if 'ION ADU Dashboard.xlsx' in fn]
     for fn in file_names:
         os.remove(DIR_REPORT+fn)
-    filename='YM -- 1 ION ADU 3.0 (Arjun) -- ' + str(datetime.now().strftime("%Y-%m-%d")) + '.xlsx'
+    filename=str(datetime.now().strftime("%Y-%m-%d")) + ' ION ADU Dashboard.xlsx'
     shutil.copy(DIR_OUTPUT + filename,DIR_REPORT + filename )
 
 
