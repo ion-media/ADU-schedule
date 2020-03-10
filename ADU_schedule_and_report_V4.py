@@ -524,7 +524,7 @@ def raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, en
 
 
 def format_df(raw, new):
-    writer = pd.ExcelWriter(DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ION ADU Dashboard.xlsx', engine='xlsxwriter')
+    writer = pd.ExcelWriter(DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' -- ION ADU Dashboard.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
     # Set Font 
@@ -2482,7 +2482,7 @@ def create_summary_pivot():
 
 def combine_xlsx_files():
     
-    f1 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ION ADU Dashboard.xlsx'
+    f1 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' -- ION ADU Dashboard.xlsx'
     f2 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADUs to delete.xlsx'
     f3 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Deal Delivery.xlsx'
     f4 = DIR_OUTPUT + 'Summary.xlsx'
@@ -2544,7 +2544,7 @@ def copy_to_reports():
     file_names = [fn for fn in os.listdir(DIR_REPORT) if 'ION ADU Dashboard.xlsx' in fn]
     for fn in file_names:
         os.remove(DIR_REPORT+fn)
-    filename=str(datetime.now().strftime("%Y-%m-%d")) + ' ION ADU Dashboard.xlsx'
+    filename=str(datetime.now().strftime("%Y-%m-%d")) + ' -- ION ADU Dashboard.xlsx'
     shutil.copy(DIR_OUTPUT + filename,DIR_REPORT + filename )
 
 
