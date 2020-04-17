@@ -1280,93 +1280,19 @@ def format_cur_standing(raw, new):
     return s, s_letter, e_letter
 
 
-def format_forecast_actual(all_ratings, four_q):
-    writer = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime("%Y-%m-%d"))+' Ratings Summary.xlsx', engine='xlsxwriter')
+
+def format_ratings(ratings_tab):
+    writer = pd.ExcelWriter(DIR_OUTPUT+ str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary'+'.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
-    # Set Font
+    # Set Font 
     workbook.formats[0].set_font_name('Arial')
-    
-    count_row = all_ratings[1].shape[0] + 1  # gives number of row count
-    count_col = all_ratings[1].shape[1] + 3  # gives number of col count
-    all_ratings[0].to_excel(writer, sheet_name='Ratings Summary', startrow=5, startcol=2, header=True, index = False)
+    ratings_tab.to_excel(writer, sheet_name='Ratings Summary', index = False)
 
     worksheet = writer.sheets['Ratings Summary']
     worksheet.set_zoom(85)
 
-
-    s = [2] # stores the start column of each dataframe
-    e = [4] # stores the end column of each dataframe
-    for i in range(1, len(all_ratings)):
-        all_ratings[i].to_excel(writer, sheet_name='Ratings Summary', startrow=5, startcol=count_col, header=True, index = False)
-        s.append(count_col)
-        for r in range(count_row):
-            for c in range(count_col, count_col):
-                worksheet.write_blank(r, c, None)
-
-        count_col += all_ratings[i].shape[1]+1
-        e.append(count_col - 2)
-    s_letter = [] #start column letter of each dataframe
-    e_letter = [] #end column letter of each dataframe
-    for i in range(len(s)):
-        s_letter.append(xlsxwriter.utility.xl_col_to_name(s[i]))
-        e_letter.append(xlsxwriter.utility.xl_col_to_name(e[i]))
-
-    # Forecast vs Actual
     
-    forecast_prev_p = xlsxwriter.utility.xl_col_to_name(s[0]+1)
-    forecast_prev_np = xlsxwriter.utility.xl_col_to_name(s[0]+2)
-    forecast_cur_p = xlsxwriter.utility.xl_col_to_name(s[1]+1)
-    forecast_cur_np = xlsxwriter.utility.xl_col_to_name(s[1]+2)
-    actual_prev_p = xlsxwriter.utility.xl_col_to_name(s[3]+1)
-    actual_prev_np = xlsxwriter.utility.xl_col_to_name(s[3]+2)
-    actual_cur_p = xlsxwriter.utility.xl_col_to_name(s[4]+1)
-    actual_cur_np = xlsxwriter.utility.xl_col_to_name(s[4]+2)    
-    
-    
-    fore_act_prev_p = xlsxwriter.utility.xl_col_to_name(e[-1]+2)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_p + str(r),'{=' + actual_prev_p + str(r) + '/' + forecast_prev_p + str(r) + '-1' +'}')   
-          
-    fore_act_prev_np = xlsxwriter.utility.xl_col_to_name(e[-1]+3)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_np + str(r),'{=' + actual_prev_np + str(r) +'/' + forecast_prev_np + str(r) + '-1'+ '}')   
-
-    fore_act_prev_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+4)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_p_delta + str(r),'{=' + actual_prev_p + str(r) + '-' + forecast_prev_p + str(r) +'}')   
-          
-    fore_act_prev_np_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+5)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_prev_np_delta + str(r),'{=' + actual_prev_np + str(r) +'-' + forecast_prev_np + str(r) + '}') 
-        
-        
-        
-    fore_act_cur_p = xlsxwriter.utility.xl_col_to_name(e[-1]+7)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_p + str(r),'{=' + actual_cur_p + str(r) +'/' + forecast_cur_p +str(r) + '-1'+ '}')   
-          
-    fore_act_cur_np = xlsxwriter.utility.xl_col_to_name(e[-1]+8)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_np + str(r),'{=' + actual_cur_np + str(r) + '/' + forecast_cur_np + str(r) + '-1'+ '}')   
-
-    fore_act_cur_p_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+9)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_p_delta + str(r),'{=' + actual_cur_p + str(r) +'-' + forecast_cur_p +str(r) + '}')   
-          
-    fore_act_cur_np_delta = xlsxwriter.utility.xl_col_to_name(e[-1]+10)
-    for r in range(7, count_row+6):
-        worksheet.write_formula(fore_act_cur_np_delta + str(r),'{=' + actual_cur_np + str(r) + '-' + forecast_cur_np + str(r) + '}')   
-    
-    
-    new_col_s_letter = [fore_act_prev_p, fore_act_cur_p]
-    new_col_e_letter = [fore_act_prev_np_delta, fore_act_cur_np_delta]
-    
-    
-    prev_q = 'Q' + str(four_q[0][0]) + ' ' + str(four_q[0][1])
-    cur_q = 'Q' + str(four_q[1][0]) + ' ' + str(four_q[1][1])
-    next_q = 'Q' + str(four_q[2][0]) + ' ' + str(four_q[2][1])
-
     # Add Title & Merge
     format_b = workbook.add_format({
         'bold': 1,
@@ -1393,69 +1319,58 @@ def format_forecast_actual(all_ratings, four_q):
         'fg_color': '#C0C0C0',
         'font_name': 'Arial'})  # grey
 
-    try:
-        worksheet.merge_range(s_letter[0] + '4:' + e_letter[0] + '4', prev_q + ' Forecast', format_o)
-        worksheet.merge_range(s_letter[1] + '4:' + e_letter[1] + '4', cur_q + ' Forecast', format_o)
-        worksheet.merge_range(s_letter[2] + '4:' + e_letter[2] + '4', next_q + ' Forecast', format_o)
-        worksheet.merge_range(s_letter[3] + '4:' + e_letter[3] + '4', prev_q + ' Actual', format_b)
-        worksheet.merge_range(s_letter[4] + '4:' + e_letter[4] + '4', cur_q + ' Actual', format_b)
-        
-        worksheet.merge_range(new_col_s_letter[0] + '4:' + new_col_e_letter[0] + '4', prev_q, format_g)
-        worksheet.merge_range(new_col_s_letter[0] + '5:' + new_col_e_letter[0] + '5', 'Actual vs. Forecast', format_g)
-
-        worksheet.merge_range(new_col_s_letter[1] + '4:' + new_col_e_letter[1] + '4', cur_q , format_g)
-        worksheet.merge_range(new_col_s_letter[1] + '5:' + new_col_e_letter[1] + '5', 'Actual vs. Forecast', format_g)
- 
-    except:
-        print('nope')
     
-    # Formatting Titles
-    for i in range(s[0], e[-1]+11):
-        if i <= e[2]:
-            if i%4!=1:
-                worksheet.write(4, i, '', format_o)
-            
-            if i%4 == 2:
-                worksheet.write(5, i, 'Demo', format_o)
-            elif i%4 == 3:
-                worksheet.write(5, i, 'P Imp', format_o)
-            elif i%4 == 0:
-                worksheet.write(5, i, 'NP Imp', format_o)
-                
-        elif i<=e[-1]:
-            if i%4!=1:
-                worksheet.write(4, i, '', format_b)
-            
-            if i%4 == 2:
-                worksheet.write(5, i, 'Demo', format_b)
-            elif i%4 == 3:
-                worksheet.write(5, i, 'P Imp', format_b)
-            elif i%4 == 0:
-                worksheet.write(5, i, 'NP Imp', format_b)
-        else: 
-            if i%5 == 2:
-                worksheet.write(5, i, 'P Imp', format_g)
-            elif i%5 == 3:
-                worksheet.write(5, i, 'NP Imp', format_g)
-            elif i%5 == 4:
-                worksheet.write(5, i, 'P Imp Delta', format_g)
-            elif i%5 == 0:
-                worksheet.write(5, i, 'NP Imp Delta', format_g)
-
-                
-    # Format number
-    fmt1 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
-    worksheet.set_column(new_col_s_letter[0] + ':' + new_col_e_letter[-1], None, fmt1)
+    # Autofilter
+    worksheet.autofilter('A1:AB80')
     
-    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
-    worksheet.set_column(s_letter[0] + ':' + e_letter[-1], None, fmt2)
-    worksheet.set_column(fore_act_prev_p_delta + ':' + fore_act_prev_np_delta, None, fmt2)
-    worksheet.set_column(fore_act_cur_p_delta + ':' + fore_act_cur_np_delta, None, fmt2)
+    # Freeze the top rows and left columns
+    worksheet.freeze_panes(1, 2)
 
-    worksheet.set_column(0, 2, 2)
+    
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial', 'fg_color': 'C4F3FC'}) #blue
+    fmt2 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial', 'fg_color': 'FADD9A'}) # orange
+    fmt3 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial', 'fg_color': '#C0C0C0'}) #grey
+    
+    fmt4 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial', 'fg_color': 'C4F3FC'})
+    fmt5 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial', 'fg_color': 'FADD9A'})
+    fmt6 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial', 'fg_color': '#C0C0C0'})
 
+    
+    worksheet.set_column('A:B', 16)
+    worksheet.set_column('C:C', 18, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('D:D', 18, fmt4, {'level': 1, 'hidden': 1})
+    worksheet.set_column('E:E', 18, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('F:F', 18, fmt4, {'level': 1, 'hidden': 1})
+    worksheet.set_column('G:G', 18, fmt1, {'level': 1, 'hidden': 1})
+    worksheet.set_column('H:H', 18, fmt1)
+    worksheet.set_column('I:I', 18, fmt1)
+    worksheet.set_column('J:J', 18, fmt4, {'level': 1, 'hidden': 1})
+    worksheet.set_column('K:K', 18, fmt4)
+    worksheet.set_column('L:L', 18, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('M:M', 18, fmt5, {'level': 1, 'hidden': 1})
+    worksheet.set_column('N:N', 18, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('O:O', 18, fmt5, {'level': 1, 'hidden': 1})
+    worksheet.set_column('P:P', 18, fmt2, {'level': 1, 'hidden': 1})
+    worksheet.set_column('Q:Q', 18, fmt2)
+    worksheet.set_column('R:R', 18, fmt2)
+
+    worksheet.set_column('S:S', 18, fmt5, {'level': 1, 'hidden': 1})
+    worksheet.set_column('T:T', 18, fmt5)
+
+    worksheet.set_column('U:U', 18, fmt3)
+    worksheet.set_column('V:V', 18, fmt3)
+    worksheet.set_column('W:X', 18, fmt3, {'level': 1, 'hidden': 1})
+    worksheet.set_column('Y:Y', 18, fmt6, {'level': 1, 'hidden': 1})
+    worksheet.set_column('Z:Z', 18, fmt6)
+    #worksheet.set_column('AB:AB', 18)
+
+    for i in range(1, 46):
+        worksheet.set_row(i, None, None, {'level': 1, 'hidden': 1})    
+
+    
     writer.save()
-    return s, s_letter, e_letter
+    return 
 
 
 def format_ADU_notes(raw):
@@ -1812,6 +1727,7 @@ def format_liability_qtr_report(date, report_df):
 
     writer.save()
     return 
+
 
 
 
@@ -2283,6 +2199,7 @@ ending_liab, ending_imp_owed, ending_adu_req, ending_liab_new, ending_imp_owed_n
 from openpyxl.utils import get_column_letter
 
 def get_summary(report_values, date_string, quar):
+    #print(report_values)
 
     wb = openpyxl.Workbook()
     ws = wb.create_sheet("Summary")
@@ -2329,7 +2246,6 @@ def get_summary(report_values, date_string, quar):
          'Liaility Paid', 'Impression Paid', 'ADUs Given', 'Liaility Paid(new)','Impression Paid (new sch)', 'ADUs Given(new sch)', \
          'Liability Bal', 'Impression owed', 'ADUs Required','Liaility Bal(new)', 'Impression owed(new sch)', 'ADUs Required(new Sch)']
     
-    wb.save(DIR_OUTPUT+'Summary.xlsx')
     
     val_i = 0
     for col_i in range(4, 25):
@@ -2349,9 +2265,166 @@ def get_summary(report_values, date_string, quar):
     
     ws.column_dimensions.group(start='O', end='Q', hidden=True)
     ws.column_dimensions.group(start='V', end='X', hidden=True)
+    
+    
+    #####################################################################
+    # quarter end liability summary
+    
+    # header
+    ws.cell(row_start, 27).value = 'ADU Ending Liability by Quarter'
+    ws.cell(row_start, 27).font = Font(bold=True, underline="single", name = 'Arial')
+    ws.cell(row_start+1, 27).value = 'Year + Quarter'
+    ws.cell(row_start+1, 27).font = Font(bold=True, underline="single", name = 'Arial')
+    ws.cell(row_start+1, 28).value = 'Gross'
+    ws.cell(row_start+1, 28).font = Font(bold=True, underline="single", name = 'Arial')
+    ws.cell(row_start+1, 29).value = 'Net'
+    ws.cell(row_start+1, 29).font = Font(bold=True, underline="single", name = 'Arial')
+    ws.cell(row_start+1, 30).value = 'Change'
+    ws.cell(row_start+1, 30).font = Font(bold=True, underline="single", name = 'Arial')
+    
+    # values
+    history = pd.read_excel(DIR_INPUT + 'ADU Ending Liability By Quarter.xlsx')
+    history_gross = history['Gross'].tolist()
+    #display(history)
+    
+    gross = report_values[12]
+    gross[9:9+len(history_gross)] = history_gross
+    
+    net = [i * 0.85 for i in gross]
+    change = [0]
+    for i in range(1, len(net)):
+        change.append(net[i]-net[i-1])
+        
+    # year and quarter
+    for i in range(2, 2+len(quar)):
+        ws.cell(row_start+i, 27).value = quar[i-2]
+        ws.cell(row_start+i, 27).font = Font(name = 'Arial')
+        
+        ws.cell(row_start+i, 28).value = gross[i-2]
+        ws.cell(row_start+i, 28).font = Font(name = 'Arial')
+        ws.cell(row_start+i, 28).number_format = '#,##0'        
 
+        ws.cell(row_start+i, 29).value = net[i-2]
+        ws.cell(row_start+i, 29).font = Font(name = 'Arial')
+        ws.cell(row_start+i, 29).number_format = '#,##0'      
+
+        ws.cell(row_start+i, 30).value = change[i-2]
+        ws.cell(row_start+i, 30).font = Font(name = 'Arial')
+        ws.cell(row_start+i, 30).number_format = '#,##0'      
+    
+
+    #Set column width
+    ws.column_dimensions['AA'].width = 15 
+    ws.column_dimensions['AB'].width = 12 
+    ws.column_dimensions['AC'].width = 12
+    ws.column_dimensions['AD'].width = 12
+    
+    
+    # group rows
+    for i in range(7, 17):
+        ws.row_dimensions[i].hidden = True        
+    
     wb.save(DIR_OUTPUT+'Summary.xlsx')
     return
+
+
+def get_finance_report(liab_update, four_q):
+    data = liab_update[liab_update['In System']=='Y']
+    all_quarters = sorted(data['Year + Quarter'].unique().tolist())
+    prev_q = str(four_q[0][1]) + ' ' + four_q[0][0] + 'Q'
+    loc = all_quarters.index(prev_q)
+    q_list = all_quarters[:loc+1]
+    
+    data = data[data['Year + Quarter'].isin(q_list)]
+    
+    pvt = pd.pivot_table(data, \
+                         index = ['Deal Year', 'Marketplace', 'Guarantee ID', 'Advertiser',\
+                                  'Primary Demo'],\
+                         columns = 'ADU Ind', \
+                         values=['Equiv Units', 'Booked Dollars','Primary Demo Equiv Post Imp', \
+                                 'Primary Demo Non-ADU Equiv Deal Imp', 'Owed_value'], \
+                         aggfunc=np.sum, fill_value=0, margins = True)
+    pvt = pvt.reset_index()
+    #pvt.columns = pvt.columns.get_level_values(0)
+    pvt = pvt.fillna(0)  
+    
+    fin_rpt = pd.DataFrame()
+    fin_rpt = pvt[['Deal Year','Marketplace', 'Guarantee ID', 'Advertiser',\
+                                  'Primary Demo' ]]
+    fin_rpt.columns = fin_rpt.columns.get_level_values(0)
+    fin_rpt[':30 SEC EQUIV'] = 'Yes'
+    fin_rpt['Cost'] = pvt['Booked Dollars']['All']
+    fin_rpt['# of sold spots'] = pvt['Equiv Units']['N']
+    fin_rpt['# of ADUs spots'] = pvt['Equiv Units']['Y']
+    fin_rpt['Guar audience(000)'] = pvt['Primary Demo Non-ADU Equiv Deal Imp']['All']
+    fin_rpt['Del audience(000)'] = pvt['Primary Demo Equiv Post Imp']['All']
+    fin_rpt['Guar CPM'] = fin_rpt['Cost'] / fin_rpt['Guar audience(000)']
+    fin_rpt['+/- audience(000)'] = fin_rpt['Del audience(000)'] - fin_rpt['Guar audience(000)']
+    fin_rpt['Liability'] = - pvt['Owed_value']['All']
+    fin_rpt['% delivery'] = fin_rpt['Del audience(000)'] / fin_rpt['Guar audience(000)']
+    
+    fin_rpt = fin_rpt[['Deal Year', 'Marketplace', 'Guarantee ID', 'Advertiser',\
+                      ':30 SEC EQUIV', 'Cost', '# of sold spots', '# of ADUs spots',\
+                      'Primary Demo' , 'Guar CPM', 'Guar audience(000)', 'Del audience(000)', \
+                      '+/- audience(000)', 'Liability', '% delivery']]
+    
+    return fin_rpt
+
+
+def fin_report_format(finance_report):
+    writer = pd.ExcelWriter(DIR_OUTPUT+ str(datetime.now().strftime("%Y-%m-%d")) + ' MSA Report'+'.xlsx', engine='xlsxwriter')
+    workbook = writer.book
+    
+    # Set Font 
+    workbook.formats[0].set_font_name('Arial')
+    finance_report.to_excel(writer, sheet_name='MSA Report', index = False)
+
+    worksheet = writer.sheets['MSA Report']
+    worksheet.set_zoom(85)
+
+    
+    # Add Title & Merge
+    format_b = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#99CCFF', 
+        'font_name': 'Arial'})
+    format_o = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFCC99',
+        'font_name': 'Arial'})
+    format_y = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#FFFFCC',
+        'font_name': 'Arial'})
+    format_g = workbook.add_format({
+        'bold': 1,
+        'align': 'left',
+        'valign': 'vcenter',
+        'fg_color': '#C0C0C0',
+        'font_name': 'Arial'})  # grey
+
+    
+    # Autofilter
+    worksheet.autofilter('A1:O' + str(len(finance_report)))
+    
+    # column Format
+    fmt1 = workbook.add_format({'num_format': '#,##0', 'font_name': 'Arial'})
+    fmt2 = workbook.add_format({'num_format': '0%', 'font_name': 'Arial'})
+
+    
+    worksheet.set_column('A:E', 16)
+    worksheet.set_column('F:N', 16, fmt1)
+    worksheet.set_column('O:O', 16, fmt2)
+
+    
+    writer.save()
+    return     
 
 
 def create_pivot():
@@ -2489,6 +2562,7 @@ def combine_xlsx_files():
     f5 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary.xlsx'
     f6 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' ADU Notes.xlsx'
     f7 = DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' Liability Report.xlsx'
+    f8 = DIR_OUTPUT+ str(datetime.now().strftime("%Y-%m-%d")) + ' MSA Report'+'.xlsx'
 
     wb_comb = xw.Book(f1)
     
@@ -2511,6 +2585,12 @@ def combine_xlsx_files():
     ws5 = wb4.sheets("Ratings Summary")
     ws5.api.Copy(After=wb_comb.sheets("ADUs to delete").api)
     wb4.close()
+
+    print('Combining MSA Report')
+    wb8 = xw.Book(f8)
+    ws8 = wb8.sheets('MSA Report')
+    ws8.api.Copy(After=wb_comb.sheets("Ratings Summary").api)
+    wb8.close()    
     
     print('Combining Summary')
     
@@ -2518,6 +2598,8 @@ def combine_xlsx_files():
     ws1 = wb1.sheets('Summary')
     ws1.api.Copy(Before=wb_comb.sheets("Deal Delivery").api)
     wb1.close()
+    
+
     
     print('Saving file')
     wb_comb.save()
@@ -2537,6 +2619,7 @@ def combine_xlsx_files():
     os.remove(f4)
     os.remove(f5)
     os.remove(f7)
+    os.remove(f8)
     
     return
 
@@ -2550,18 +2633,34 @@ def copy_to_reports():
 
 def forecast_actual(df, internal_estimates, four_q):
     C3_file = DIR_INPUT+'Quarterly C3 rating.csv'
-    C3_rating = pd.read_csv(C3_file)
-    actual_prev = get_ratings(df, C3_rating, int(four_q[0][0]), int(four_q[0][1]))
-    actual_cur = get_ratings(df, C3_rating, int(four_q[1][0]), int(four_q[1][1]))
+    C3_rating = pd.read_csv(C3_file)    
     
-    forecast_prev = get_ratings(df, internal_estimates, int(four_q[0][0]), int(four_q[0][1]))
-    forecast_cur = get_ratings(df, internal_estimates, int(four_q[1][0]), int(four_q[1][1]))
-    forecast_next = get_ratings(df, internal_estimates, int(four_q[2][0]), int(four_q[2][1]))
+    df = df[df['Year'].astype(int) >= 2019]    
+    
+    all_quarters = df['Year + Quarter'].unique().tolist()
+    cur_q = (four_q[1][1], int(four_q[1][0]))
+    #print(cur_q)
+
+    q_list = list()
+    for q in all_quarters:
+        yr, qtr = q.split(' ')
+        yr = int(yr)
+        qtr = int(qtr[0])
+        q_list.append((yr, qtr))
+        if (yr, qtr) == cur_q:
+            break
+        
+    q_list = sorted(q_list)[2:]
+    #print(q_list)
+    
+    all_df = []
+    for yr, qtr in q_list:
+        forecast = get_ratings(df, internal_estimates, qtr, yr)
+        all_df.append(forecast)
 
     demo_sort_df = df.groupby(['Primary Demo']).sum()['Booked Dollars'].reset_index().sort_values('Booked Dollars', ascending=False)
-    demo_sort = demo_sort_df['Primary Demo'].tolist()    
+    demo_sort = demo_sort_df['Primary Demo'].tolist()  
     
-    all_df = [forecast_prev, forecast_cur, forecast_next, actual_prev, actual_cur]
     res = []
     for temp in all_df:
         temp = temp.set_index('Demo')
@@ -2569,6 +2668,178 @@ def forecast_actual(df, internal_estimates, four_q):
         temp = temp.reset_index()
         res.append(temp)
     return res
+
+
+def new_rating_tab(liab_update, raw1, four_q, all_ratings):
+    
+    df = liab_update[(liab_update['In System'] == 'Y') & \
+                     (liab_update['Year'].astype(int) >= 2019)]
+    all_quarters = df['Year + Quarter'].unique().tolist()
+    cur_q = (four_q[1][1], int(four_q[1][0]))
+    #print(cur_q)
+
+    q_list = list()
+    for q in all_quarters:
+        yr, qtr = q.split(' ')
+        yr = int(yr)
+        qtr = int(qtr[0])
+        q_list.append((yr, qtr))
+        if (yr, qtr) == cur_q:
+            break
+        
+    q_list = sorted(q_list)[2:]
+    
+    
+    df['Real_ind'] = np.where(df['Primary Demo Equiv Post Imp - IE 1']==0, 'No', 'Yes')
+    df['Daypart'] = np.where(df['Selling Title'].isin(P), 'Prime', 'Non-Prime')
+    df['Quarter'] = 'Q' + df['Quarter'].astype('str')
+    df['Year'] = df['Year'].astype('str')
+    
+    pvt = pd.pivot_table(df, values=[
+                                    'Primary Demo Non-ADU Equiv Deal Imp',\
+                                    'Primary Demo Equiv Post Imp', \
+                                    'Primary Demo Equiv Post Imp - IE 1', 'Equiv Units', \
+                                     'Booked Dollars',\
+                                    'Owed_value'\
+                                    ],
+                             index=['Guarantee ID', 'Year', 'Quarter','Year + Quarter', 'Primary Demo', 'Daypart', 'Real_ind', 'ADU Ind'], \
+                             aggfunc={
+                                     'Primary Demo Non-ADU Equiv Deal Imp':np.sum,\
+                                     'Primary Demo Equiv Post Imp - IE 1':np.sum,  \
+                                     'Primary Demo Equiv Post Imp':np.sum, \
+                                     'Equiv Units':np.sum, 'Booked Dollars':np.sum, \
+                                      'Owed_value':np.sum \
+                                     }, 
+                             #aggfunc = np.sum, 
+                             fill_value=0, margins = True)
+    ratingTable = pvt.reset_index()
+    #display(ratingTable)
+    ratingTable['Guar Imp'] = ratingTable['Primary Demo Non-ADU Equiv Deal Imp'] 
+    ratingTable['Post Imp'] = ratingTable['Primary Demo Equiv Post Imp'] 
+    ratingTable['Real Imp'] = ratingTable['Primary Demo Equiv Post Imp - IE 1'] /1000 
+    
+    
+    ratingTable.sort_values(by=['Guarantee ID', 'Year', 'Quarter','Daypart', 'Booked Dollars'],\
+                        ascending=[True, True, True, True, False], inplace=True)
+    ratingTable = ratingTable[['Guarantee ID', 'Year', 'Quarter', 'Year + Quarter','Primary Demo', 'Daypart', 'Real_ind','ADU Ind', 'Equiv Units', \
+                    'Real Imp', 'Guar Imp', 'Post Imp', 'Booked Dollars', 
+                       'Owed_value'
+                      ]]
+    
+   
+    
+    pvt2 = pd.pivot_table(ratingTable, values=[
+                                    'Booked Dollars',
+                                    'Owed_value',
+                                    'Guar Imp',\
+                                    'Post Imp', \
+                                    'Equiv Units'
+                                    ],
+                             index=['Year + Quarter', 'Primary Demo'], \
+                             columns=['Daypart', 'ADU Ind'],\
+                             aggfunc={
+                                     'Booked Dollars':np.sum,\
+                                     'Owed_value':np.sum,  \
+                                     'Guar Imp':np.sum, \
+                                      'Post Imp':np.sum, \
+                                     'Equiv Units': np.sum
+                                     }, 
+                             #aggfunc = np.sum, 
+                             fill_value=0, margins = True)    
+    
+    
+    report_pvt = pvt2.reset_index()
+    #display(report_pvt)
+    
+
+    report = pd.DataFrame()
+    report['Year + Quarter'] = report_pvt['Year + Quarter']
+    report['Demo'] = report_pvt['Primary Demo']
+
+    
+    
+    report['Prime Forecast Imp'] = np.nan
+    report['Non-Prime Forecast Imp'] = np.nan
+    #print(report.loc[(report['Year + Quarter'] == '2020 1Q') & (report['Demo'] == 'P25-54'), 'Prime Forecast Imp'])
+    
+    demos = report['Demo'].unique().tolist()
+    #print(demos)
+    for i in range(len(q_list)):
+        fore_ratings = all_ratings[i]
+        q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
+        #print(q)
+        #display(fore_ratings)
+        for d in demos:
+            if d != '':
+                report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'] \
+                 = fore_ratings[fore_ratings['Demo'] == d]['Prime Imp'].iloc[0]
+                report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Non-Prime Forecast Imp'] \
+                 = fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0]   
+                #print(report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'])
+                #print(fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0])
+    
+    #display(report)
+    
+    
+    for dp in ['Prime', 'Non-Prime']:
+        report[dp + ' Booked Dollars'] = report_pvt['Booked Dollars'][dp]['N']
+
+        report[dp + ' Dollars %'] = np.nan
+
+        report[dp + ' Liability'] = report_pvt['Owed_value'][dp]['Y'] + report_pvt['Owed_value'][dp]['N']
+        report[dp + ' Liability %'] = report[dp + ' Liability'] / report[dp + ' Booked Dollars']
+        report[dp + ' Guar Imp'] = report_pvt['Guar Imp'][dp]['N'] / report_pvt['Equiv Units'][dp]['N']
+        #report[dp + ' Foreccast Imp'] = np.nan
+        #report[dp + ' Forecast Imp'] = (report_pvt['Forecast Imp'][dp]['N'] +  report_pvt['Forecast Imp'][dp]['Y'])\
+        #                             / (report_pvt['Equiv Units'][dp]['N'] + report_pvt['Equiv Units'][dp]['Y'])
+        report[dp + ' Post Imp'] = (report_pvt['Post Imp'][dp]['N'] +  report_pvt['Post Imp'][dp]['Y'])\
+                                / (report_pvt['Equiv Units'][dp]['N'] + report_pvt['Equiv Units'][dp]['Y'])
+        report[dp + ' Imp Delv %'] = (report_pvt['Post Imp'][dp]['N'] +  report_pvt['Post Imp'][dp]['Y'])\
+                                    / report_pvt['Guar Imp'][dp]['N']
+        report[dp + ' Ratings Diff %'] = report[dp + ' Post Imp'] /report[dp + ' Forecast Imp'] -1
+        
+
+    report['Total Booked Dollars'] = report['Prime Booked Dollars'] + report['Non-Prime Booked Dollars']
+    report['Total Dollars %'] = np.nan
+
+    report['Total Liability'] = report['Prime Liability'] + report['Non-Prime Liability']
+    report['Total Guar Imp'] =  (report_pvt['Guar Imp']['Prime']['N'] +  report_pvt['Guar Imp']['Non-Prime']['N'])\
+                             / (report_pvt['Equiv Units']['Prime']['N'] + report_pvt['Equiv Units']['Non-Prime']['N'])
+    #report['Total Forecast Imp'] = report_pvt['Forecast Imp']['All'] / report_pvt['Equiv Units']['All']
+    report['Total Post Imp'] = report_pvt['Post Imp']['All'] / report_pvt['Equiv Units']['All']
+    report['Total Imp Delv %'] = (report_pvt['Post Imp']['Prime']['N'] +  report_pvt['Post Imp']['Prime']['Y']\
+                                 + report_pvt['Post Imp']['Non-Prime']['N'] +  report_pvt['Post Imp']['Non-Prime']['Y']) \
+                        / (report_pvt['Guar Imp']['Prime']['N'] +  report_pvt['Guar Imp']['Non-Prime']['N'])
+    
+     # total delv < 70% and P ratings diff >10% and NP > 10%
+    report['Warning Flag'] = np.where((report['Total Imp Delv %']<0.7) \
+                                      | (report['Prime Ratings Diff %'].abs() >0.1) \
+                                      | (report['Non-Prime Ratings Diff %'].abs() > 0.1)\
+                                      | (report['Total Imp Delv %'] > 1.1), 'Yes', 'No') 
+  
+    for i in range(len(q_list)):
+        q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
+        p_dollars = report_pvt[report_pvt['Year + Quarter'] == q]['Booked Dollars']['Prime']['N'].sum()
+        np_dollars = report_pvt[report_pvt['Year + Quarter']==q]['Booked Dollars']['Non-Prime']['N'].sum()
+        total_dollars = p_dollars + np_dollars
+        report.loc[report['Year + Quarter'] == q, 'Prime Dollars %'] = report[report['Year + Quarter'] == q]['Prime Booked Dollars']/p_dollars
+        report.loc[report['Year + Quarter'] == q, 'Non-Prime Dollars %'] = report[report['Year + Quarter'] == q]['Non-Prime Booked Dollars']/np_dollars
+        report.loc[report['Year + Quarter'] == q, 'Total Dollars %'] = report[report['Year + Quarter'] == q]['Total Booked Dollars']/total_dollars
+
+        
+    report.sort_values(['Year + Quarter', 'Total Booked Dollars'], ascending=[True, False], inplace=True)
+    report = report.drop(report.index[0])
+    
+    report = report[['Year + Quarter', 'Demo', 'Prime Booked Dollars', 'Prime Dollars %', 'Prime Liability', \
+                    'Prime Liability %', 'Prime Guar Imp', 'Prime Forecast Imp', 'Prime Post Imp', 'Prime Imp Delv %', \
+                    'Prime Ratings Diff %', 'Non-Prime Booked Dollars', 'Non-Prime Dollars %', 'Non-Prime Liability', \
+                    'Non-Prime Liability %', 'Non-Prime Guar Imp', 'Non-Prime Forecast Imp', 'Non-Prime Post Imp', \
+                    'Non-Prime Imp Delv %', 'Non-Prime Ratings Diff %', 'Total Booked Dollars', 'Total Liability', \
+                    'Total Guar Imp', 'Total Post Imp', 'Total Imp Delv %', 'Warning Flag']]
+    
+    return report
+
+
 
 def liability_qtr_report(basic, liab_update, cur_q):
     quar = sorted(liab_update['Year + Quarter'].unique())
@@ -2677,15 +2948,22 @@ def main(Q_num = 2):
     
     print('Comparing forcast and actual ratings')
     all_ratings = forecast_actual(df, internal_estimates, four_q)
-    format_forecast_actual(all_ratings, four_q)
+    ratings_tab = new_rating_tab(liab_update, raw[1], four_q, all_ratings)
+    format_ratings(ratings_tab)
     t8 = time.time()
     print('Time for comparing forcast and actual ratings: ', t8-t7)
+    
+    print('Get MSA Report')
+    finance_report = get_finance_report(liab_update, four_q)
+    fin_report_format(finance_report)
+    t9 = time.time()
+    print('Time for getting MSA report: ', t9-t8)
     
     combine_xlsx_files()
     print('Done')
 
     copy_to_reports()
-    print('Total Time: ', t8 - t1)
+    print('Total Time: ', t9 - t1)
     return
 
 
