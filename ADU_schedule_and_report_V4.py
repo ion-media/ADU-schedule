@@ -2352,16 +2352,16 @@ def get_finance_report(liab_update, four_q):
     fin_rpt = pvt[['Deal Year','Marketplace', 'Guarantee ID', 'Advertiser',\
                                   'Primary Demo' ]]
     fin_rpt.columns = fin_rpt.columns.get_level_values(0)
-    fin_rpt[':30 SEC EQUIV'] = 'Yes'
-    fin_rpt['Cost'] = pvt['Booked Dollars']['All']
-    fin_rpt['# of sold spots'] = pvt['Equiv Units']['N']
-    fin_rpt['# of ADUs spots'] = pvt['Equiv Units']['Y']
-    fin_rpt['Guar audience(000)'] = pvt['Primary Demo Non-ADU Equiv Deal Imp']['All']
-    fin_rpt['Del audience(000)'] = pvt['Primary Demo Equiv Post Imp']['All']
-    fin_rpt['Guar CPM'] = fin_rpt['Cost'] / fin_rpt['Guar audience(000)']
-    fin_rpt['+/- audience(000)'] = fin_rpt['Del audience(000)'] - fin_rpt['Guar audience(000)']
-    fin_rpt['Liability'] = - pvt['Owed_value']['All']
-    fin_rpt['% delivery'] = fin_rpt['Del audience(000)'] / fin_rpt['Guar audience(000)']
+    fin_rpt.loc[:, ':30 SEC EQUIV'] = 'Yes'
+    fin_rpt.loc[:, 'Cost'] = pvt['Booked Dollars']['All']
+    fin_rpt.loc[:, '# of sold spots'] = pvt['Equiv Units']['N']
+    fin_rpt.loc[:, '# of ADUs spots'] = pvt['Equiv Units']['Y']
+    fin_rpt.loc[:, 'Guar audience(000)'] = pvt['Primary Demo Non-ADU Equiv Deal Imp']['All']
+    fin_rpt.loc[:, 'Del audience(000)'] = pvt['Primary Demo Equiv Post Imp']['All']
+    fin_rpt.loc[:, 'Guar CPM'] = fin_rpt['Cost'] / fin_rpt['Guar audience(000)']
+    fin_rpt.loc[:, '+/- audience(000)'] = fin_rpt['Del audience(000)'] - fin_rpt['Guar audience(000)']
+    fin_rpt.loc[:, 'Liability'] = - pvt['Owed_value']['All']
+    fin_rpt.loc[:, '% delivery'] = fin_rpt['Del audience(000)'] / fin_rpt['Guar audience(000)']
     
     fin_rpt = fin_rpt[['Deal Year', 'Marketplace', 'Guarantee ID', 'Advertiser',\
                       ':30 SEC EQUIV', 'Cost', '# of sold spots', '# of ADUs spots',\
@@ -2671,6 +2671,7 @@ def forecast_actual(df, internal_estimates, four_q):
 
 
 def new_rating_tab(liab_update, raw1, four_q, all_ratings):
+    print('section 0')
     
     df = liab_update[(liab_update['In System'] == 'Y') & \
                      (liab_update['Year'].astype(int) >= 2019)]
@@ -2689,11 +2690,11 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
         
     q_list = sorted(q_list)[2:]
     
-    
-    df['Real_ind'] = np.where(df['Primary Demo Equiv Post Imp - IE 1']==0, 'No', 'Yes')
-    df['Daypart'] = np.where(df['Selling Title'].isin(P), 'Prime', 'Non-Prime')
-    df['Quarter'] = 'Q' + df['Quarter'].astype('str')
-    df['Year'] = df['Year'].astype('str')
+   
+    df.loc[:, 'Real_ind'] = np.where(df['Primary Demo Equiv Post Imp - IE 1']==0, 'No', 'Yes')
+    df.loc[:, 'Daypart'] = np.where(df['Selling Title'].isin(P), 'Prime', 'Non-Prime')
+    df.loc[:, 'Quarter'] = 'Q' + df['Quarter'].astype('str')
+    df.loc[:, 'Year'] = df['Year'].astype('str')
     
     pvt = pd.pivot_table(df, values=[
                                     'Primary Demo Non-ADU Equiv Deal Imp',\
@@ -2714,6 +2715,8 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
                              fill_value=0, margins = True)
     ratingTable = pvt.reset_index()
     #display(ratingTable)
+
+   
     ratingTable['Guar Imp'] = ratingTable['Primary Demo Non-ADU Equiv Deal Imp'] 
     ratingTable['Post Imp'] = ratingTable['Primary Demo Equiv Post Imp'] 
     ratingTable['Real Imp'] = ratingTable['Primary Demo Equiv Post Imp - IE 1'] /1000 
@@ -2753,10 +2756,9 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     
 
     report = pd.DataFrame()
-    report['Year + Quarter'] = report_pvt['Year + Quarter']
-    report['Demo'] = report_pvt['Primary Demo']
+    report.loc[:, 'Year + Quarter'] = report_pvt['Year + Quarter']
+    report.loc[:, 'Demo'] = report_pvt['Primary Demo']
 
-    
     
     report['Prime Forecast Imp'] = np.nan
     report['Non-Prime Forecast Imp'] = np.nan
@@ -2780,7 +2782,6 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     
     #display(report)
     
-    
     for dp in ['Prime', 'Non-Prime']:
         report[dp + ' Booked Dollars'] = report_pvt['Booked Dollars'][dp]['N']
 
@@ -2799,6 +2800,7 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
         report[dp + ' Ratings Diff %'] = report[dp + ' Post Imp'] /report[dp + ' Forecast Imp'] -1
         
 
+
     report['Total Booked Dollars'] = report['Prime Booked Dollars'] + report['Non-Prime Booked Dollars']
     report['Total Dollars %'] = np.nan
 
@@ -2810,9 +2812,10 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     report['Total Imp Delv %'] = (report_pvt['Post Imp']['Prime']['N'] +  report_pvt['Post Imp']['Prime']['Y']\
                                  + report_pvt['Post Imp']['Non-Prime']['N'] +  report_pvt['Post Imp']['Non-Prime']['Y']) \
                         / (report_pvt['Guar Imp']['Prime']['N'] +  report_pvt['Guar Imp']['Non-Prime']['N'])
+
     
      # total delv < 70% and P ratings diff >10% and NP > 10%
-    report['Warning Flag'] = np.where((report['Total Imp Delv %']<0.7) \
+    report.loc[:, 'Warning Flag'] = np.where((report['Total Imp Delv %']<0.7) \
                                       | (report['Prime Ratings Diff %'].abs() >0.1) \
                                       | (report['Non-Prime Ratings Diff %'].abs() > 0.1)\
                                       | (report['Total Imp Delv %'] > 1.1), 'Yes', 'No') 
@@ -2826,7 +2829,7 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
         report.loc[report['Year + Quarter'] == q, 'Non-Prime Dollars %'] = report[report['Year + Quarter'] == q]['Non-Prime Booked Dollars']/np_dollars
         report.loc[report['Year + Quarter'] == q, 'Total Dollars %'] = report[report['Year + Quarter'] == q]['Total Booked Dollars']/total_dollars
 
-        
+ 
     report.sort_values(['Year + Quarter', 'Total Booked Dollars'], ascending=[True, False], inplace=True)
     report = report.drop(report.index[0])
     
