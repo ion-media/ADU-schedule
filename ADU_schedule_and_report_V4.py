@@ -27,11 +27,11 @@ from openpyxl.utils import get_column_letter
 
 
 # Global parameter
-DIR_INPUT  ='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/'
+DIR_INPUT  ='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/'
 #DIR_INPUT ='C:/ION/Commercial/ADU_Report/V2/'
-DIR_OUTPUT='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_reports/'
+DIR_OUTPUT ='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_reports/'
 #DIR_OUTPUT ='C:/ION/Commercial/ADU_Report/V2/'
-DIR_ARCHIVE='//ion.media/files/APPS/Analytics/_Data_/Misc/ADU Trust 3.0/adu_raw_data/history_raw/'
+DIR_ARCHIVE='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT ='//ion.media/shared/1 Commercial/! IM 3.0/2 Control 2/'
 #DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM',"Valentine's Day Movie (Prime)"])
@@ -2880,7 +2880,7 @@ def liability_qtr_report(basic, liab_update, cur_q):
 
 
 
-def main(Q_num = 2):
+def main(Q_num = 1):
     print("Reading Data")
     
     t1 = time.time()
