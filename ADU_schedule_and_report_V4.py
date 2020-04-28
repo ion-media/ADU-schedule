@@ -191,7 +191,10 @@ class GID:
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))
+        ##self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))
+        self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))\
+                        if self.Total['Imps Owed'] > 0 \
+                        else min(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc)) 
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
