@@ -1972,10 +1972,10 @@ def liability(new):
     df_sort['Owed_value'] = Owed_value
 
     df_sort['Primary Demo Equiv Deal Imp'] = df_sort['Primary Demo Equiv Deal Imp']/1000
-    #df_sort['Primary Demo Equiv Post Imp - IE 1'] = df_sort['Primary Demo Equiv Post Imp - IE 1'] / 1000
-    #df_sort['Primary Demo ADU Equiv Deal Imp'] = df_sort['Primary Demo ADU Equiv Deal Imp'] / 1000
+    df_sort['Primary Demo Equiv Post Imp - IE 1'] = df_sort['Primary Demo Equiv Post Imp - IE 1'] / 1000
+    df_sort['Primary Demo ADU Equiv Deal Imp'] = df_sort['Primary Demo ADU Equiv Deal Imp'].str.replace(',', '').astype(float) / 1000
     df_sort['Primary Demo Non-ADU Equiv Deal Imp'] = df_sort['Primary Demo Non-ADU Equiv Deal Imp'] / 1000
-    #df_sort['Primary Demo Equiv Ratecard Imp'] = df_sort['Primary Demo Equiv Ratecard Imp'] / 1000
+    df_sort['Primary Demo Equiv Ratecard Imp'] = df_sort['Primary Demo Equiv Ratecard Imp'] / 1000
     df_sort['Primary Demo Equiv Post Imp'] = df_sort['Primary Demo Equiv Post Imp'] / 1000
     df_sort['Acc_Deal_Imp'] = df_sort['Acc_Deal_Imp'] / 1000
     df_sort['Acc_Delv_Imp'] = df_sort['Acc_Delv_Imp'] / 1000
@@ -1986,7 +1986,8 @@ def liability(new):
     df_sort['Effec_Delv_value'] = df_sort['Effec_Delv_value']/1000
     df_sort['Acc_Effec_Delv_value'] = df_sort['Acc_Effec_Delv_value']/1000
     df_sort['Owed_value'] = df_sort['Owed_value']/1000
-
+    df_sort['Week Start Date'] =df_sort['Week Start Date'].dt.strftime('%m/%d/%Y')
+    df_sort['Week End Date'] = df_sort['Week End Date'].dt.strftime('%m/%d/%Y')
 
     return df_sort
 
