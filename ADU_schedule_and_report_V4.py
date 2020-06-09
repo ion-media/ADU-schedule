@@ -27,11 +27,11 @@ from openpyxl.utils import get_column_letter
 
 
 # Global parameter
-DIR_INPUT  ='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/'
+DIR_INPUT  ='//tocvshared/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/'
 #DIR_INPUT ='C:/ION/Commercial/ADU_Report/V2/'
-DIR_OUTPUT ='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_reports/'
+DIR_OUTPUT='//tocvshared/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_reports/'
 #DIR_OUTPUT ='C:/ION/Commercial/ADU_Report/V2/'
-DIR_ARCHIVE='//ion.media/files/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/history_raw/'
+DIR_ARCHIVE='//tocvshared/APPS/Analytics/3 Capability/ADU Trust 3.0/adu_raw_data/history_raw/'
 DIR_REPORT ='//ion.media/shared/1 Commercial/! IM 3.0/2 Data Tools/'
 #DIR_REPORT='C:/ION/Commercial/ADU_Report/V2/'
 P = set(['Holiday Movies (Prime)', 'ION Originals (Prime)', 'Prime', 'Prime no CM',"Valentine's Day Movie (Prime)"])
@@ -191,10 +191,7 @@ class GID:
         self.P['Delv'] = self.P['Est'] / self.P['Guar'] if self.P['Guar'] else 0
 
         self.NP['Guar'] = self.Sold_NP['Deal Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
-        ##self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))
-        self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))\
-                        if self.Total['Imps Owed'] > 0 \
-                        else min(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc)) 
+        self.NP['ADUs'] =max(0,round((self.Total['Imps Owed'] - self.P['ADUs']*self.P['Forecast Imp']) / self.NP['Forecast Imp']*NP_more_units_perc))
         self.NP['Est'] = self.Sold_NP['Delv Imp'] / self.Sold_NP['Units'] if self.Sold_NP['Units'] else 0
         self.NP['Delv'] = self.NP['Est'] / self.NP['Guar'] if self.NP['Guar'] else 0
         self.Total['ADUs'] = self.P['ADUs'] + self.NP['ADUs']
@@ -331,6 +328,7 @@ def quarter_startdate(quarters, four_q):
     for q in four_q:
         a = quarters[quarters['end_date'].str.contains(str(q[1]))]
         a = a[a['quarter'].astype(str) == 'Q' + q[0]]
+        #print(a['start_date'])
         l.append(a['start_date'].iloc[0])
     return l
 
@@ -527,6 +525,11 @@ def raw_result(df, quarters, date_string, startdate, ratings, four_q, startq, en
 
 
 def format_df(raw, new):
+    writer_adu_data = pd.ExcelWriter(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Data.xlsx', engine='xlsxwriter')
+    writer_adu_data.book.use_zip64()
+    new.to_excel(writer_adu_data,sheet_name='Data', index = False)
+    writer_adu_data.save()
+    
     writer = pd.ExcelWriter(DIR_OUTPUT + str(datetime.now().strftime("%Y-%m-%d")) + ' -- ION ADU Dashboard.xlsx', engine='xlsxwriter')
     workbook = writer.book
     
@@ -536,8 +539,6 @@ def format_df(raw, new):
     count_row = raw[1].shape[0] + 1  # gives number of row count
     count_col = raw[1].shape[1] + 3  # gives number of col count
     raw[1].to_excel(writer, sheet_name='ADUs to schedule', startrow=7, startcol=2, header=False, index = False)
-    
-    new.to_excel(DIR_OUTPUT+str(datetime.now().strftime('%Y-%m-%d'))+' ADU Data.xlsx',sheet_name='Data', index = False)
 
     worksheet = writer.sheets['ADUs to schedule']
     worksheet.set_zoom(85)
@@ -1283,7 +1284,6 @@ def format_cur_standing(raw, new):
     return s, s_letter, e_letter
 
 
-
 def format_ratings(ratings_tab):
     writer = pd.ExcelWriter(DIR_OUTPUT+ str(datetime.now().strftime("%Y-%m-%d")) + ' Ratings Summary'+'.xlsx', engine='xlsxwriter')
     workbook = writer.book
@@ -1374,7 +1374,6 @@ def format_ratings(ratings_tab):
     
     writer.save()
     return 
-
 
 def format_ADU_notes(raw):
 
@@ -1733,7 +1732,6 @@ def format_liability_qtr_report(date, report_df):
 
 
 
-
 def new_data(raw, quarters):
     general = dict()
     P_ADU_dict = raw[4].to_dict('index')
@@ -1972,10 +1970,10 @@ def liability(new):
     df_sort['Owed_value'] = Owed_value
 
     df_sort['Primary Demo Equiv Deal Imp'] = df_sort['Primary Demo Equiv Deal Imp']/1000
-    df_sort['Primary Demo Equiv Post Imp - IE 1'] = df_sort['Primary Demo Equiv Post Imp - IE 1'] / 1000
-    df_sort['Primary Demo ADU Equiv Deal Imp'] = df_sort['Primary Demo ADU Equiv Deal Imp'].str.replace(',', '').astype(float) / 1000
+    #df_sort['Primary Demo Equiv Post Imp - IE 1'] = df_sort['Primary Demo Equiv Post Imp - IE 1'] / 1000
+    #df_sort['Primary Demo ADU Equiv Deal Imp'] = df_sort['Primary Demo ADU Equiv Deal Imp'] / 1000
     df_sort['Primary Demo Non-ADU Equiv Deal Imp'] = df_sort['Primary Demo Non-ADU Equiv Deal Imp'] / 1000
-    df_sort['Primary Demo Equiv Ratecard Imp'] = df_sort['Primary Demo Equiv Ratecard Imp'] / 1000
+    #df_sort['Primary Demo Equiv Ratecard Imp'] = df_sort['Primary Demo Equiv Ratecard Imp'] / 1000
     df_sort['Primary Demo Equiv Post Imp'] = df_sort['Primary Demo Equiv Post Imp'] / 1000
     df_sort['Acc_Deal_Imp'] = df_sort['Acc_Deal_Imp'] / 1000
     df_sort['Acc_Delv_Imp'] = df_sort['Acc_Delv_Imp'] / 1000
@@ -1986,8 +1984,7 @@ def liability(new):
     df_sort['Effec_Delv_value'] = df_sort['Effec_Delv_value']/1000
     df_sort['Acc_Effec_Delv_value'] = df_sort['Acc_Effec_Delv_value']/1000
     df_sort['Owed_value'] = df_sort['Owed_value']/1000
-    df_sort['Week Start Date'] =df_sort['Week Start Date'].dt.strftime('%m/%d/%Y')
-    df_sort['Week End Date'] = df_sort['Week End Date'].dt.strftime('%m/%d/%Y')
+
 
     return df_sort
 
@@ -2031,6 +2028,7 @@ def combine_demo(df):
                         demo_dic[d].append('F' + demo_list[i])
                         demo_dic[d].append('M' + demo_list[i])
     return demo_dic
+
 
 def get_ratings(df, internal_estimates, cur_q, cur_y):
     estimates_NP = internal_estimates.loc[(internal_estimates['Selling Title'] == 'MSU7A7P1A3A') & (internal_estimates['Quarter'] ==cur_q ) & (internal_estimates['Year'] ==cur_y )]
@@ -2471,9 +2469,13 @@ def create_pivot():
     # format
     
     ws = wb.Worksheets('Pivot Table')
+    time.sleep(1)
     Sheet2.UsedRange.Font.Name = 'Arial'
+    time.sleep(1)
     Sheet2.UsedRange.Font.Size = 10
+    time.sleep(1)
     Sheet2.UsedRange.NumberFormat = "#,##0"
+    time.sleep(1)
     
     PivotTable.InGridDropZones = True
     #Sheet2.PivotTables('ReportPivotTable').RowAxisLayout(win32c.xlTabularRow)
@@ -2524,6 +2526,7 @@ def create_summary_pivot():
 
     # Pivot Table 2
     cl3=ws2.Cells(ws2.UsedRange.Rows.Count+7,1)
+    time.sleep(1)
     PivotTargetRange= ws2.Range(cl3,cl3)
     PivotTableName = 'DemoTable'
 
@@ -2544,9 +2547,13 @@ def create_summary_pivot():
     
     # format
     ws2 = wb.Worksheets('Pivot')
+    time.sleep(1)
     ws2.UsedRange.Font.Name = 'Arial'
+    time.sleep(1)
     ws2.UsedRange.Font.Size = 10
+    time.sleep(1)
     ws2.UsedRange.NumberFormat = "#,##0"
+    time.sleep(1)
     
    # Calculated Fields
     #PivotTable.CalculatedFields().Add('Dollar %','= Total Booked $ / GrossUnits')
@@ -2651,16 +2658,19 @@ def forecast_actual(df, internal_estimates, four_q):
         yr = int(yr)
         qtr = int(qtr[0])
         q_list.append((yr, qtr))
-        if (yr, qtr) == cur_q:
-            break
+        #if (yr, qtr) == cur_q:
+            #break
         
     q_list = sorted(q_list)[2:]
     #print(q_list)
     
     all_df = []
     for yr, qtr in q_list:
-        forecast = get_ratings(df, internal_estimates, qtr, yr)
-        all_df.append(forecast)
+        try:
+            forecast = get_ratings(df, internal_estimates, qtr, yr)
+            all_df.append(forecast)
+        except:
+            pass
 
     demo_sort_df = df.groupby(['Primary Demo']).sum()['Booked Dollars'].reset_index().sort_values('Booked Dollars', ascending=False)
     demo_sort = demo_sort_df['Primary Demo'].tolist()  
@@ -2675,7 +2685,6 @@ def forecast_actual(df, internal_estimates, four_q):
 
 
 def new_rating_tab(liab_update, raw1, four_q, all_ratings):
-    print('section 0')
     
     df = liab_update[(liab_update['In System'] == 'Y') & \
                      (liab_update['Year'].astype(int) >= 2019)]
@@ -2689,12 +2698,11 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
         yr = int(yr)
         qtr = int(qtr[0])
         q_list.append((yr, qtr))
-        if (yr, qtr) == cur_q:
-            break
+        #if (yr, qtr) == cur_q:
+            #break
         
     q_list = sorted(q_list)[2:]
     
-   
     df.loc[:, 'Real_ind'] = np.where(df['Primary Demo Equiv Post Imp - IE 1']==0, 'No', 'Yes')
     df.loc[:, 'Daypart'] = np.where(df['Selling Title'].isin(P), 'Prime', 'Non-Prime')
     df.loc[:, 'Quarter'] = 'Q' + df['Quarter'].astype('str')
@@ -2719,8 +2727,6 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
                              fill_value=0, margins = True)
     ratingTable = pvt.reset_index()
     #display(ratingTable)
-
-   
     ratingTable['Guar Imp'] = ratingTable['Primary Demo Non-ADU Equiv Deal Imp'] 
     ratingTable['Post Imp'] = ratingTable['Primary Demo Equiv Post Imp'] 
     ratingTable['Real Imp'] = ratingTable['Primary Demo Equiv Post Imp - IE 1'] /1000 
@@ -2760,9 +2766,10 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     
 
     report = pd.DataFrame()
-    report.loc[:, 'Year + Quarter'] = report_pvt['Year + Quarter']
-    report.loc[:, 'Demo'] = report_pvt['Primary Demo']
+    report['Year + Quarter'] = report_pvt['Year + Quarter']
+    report['Demo'] = report_pvt['Primary Demo']
 
+    
     
     report['Prime Forecast Imp'] = np.nan
     report['Non-Prime Forecast Imp'] = np.nan
@@ -2771,20 +2778,24 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     demos = report['Demo'].unique().tolist()
     #print(demos)
     for i in range(len(q_list)):
-        fore_ratings = all_ratings[i]
-        q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
-        #print(q)
-        #display(fore_ratings)
-        for d in demos:
-            if d != '':
-                report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'] \
-                 = fore_ratings[fore_ratings['Demo'] == d]['Prime Imp'].iloc[0]
-                report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Non-Prime Forecast Imp'] \
-                 = fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0]   
-                #print(report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'])
-                #print(fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0])
+        try:
+            fore_ratings = all_ratings[i]
+            q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
+            #print(q)
+            #display(fore_ratings)
+            for d in demos:
+                if d != '':
+                    report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'] \
+                     = fore_ratings[fore_ratings['Demo'] == d]['Prime Imp'].iloc[0]
+                    report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Non-Prime Forecast Imp'] \
+                     = fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0]   
+                    #print(report.loc[(report['Year + Quarter'] == q) & (report['Demo'] == d), 'Prime Forecast Imp'])
+                    #print(fore_ratings[fore_ratings['Demo'] == d]['Non Prime Imp'].iloc[0])
+        except:
+            pass
     
     #display(report)
+    
     
     for dp in ['Prime', 'Non-Prime']:
         report[dp + ' Booked Dollars'] = report_pvt['Booked Dollars'][dp]['N']
@@ -2804,7 +2815,6 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
         report[dp + ' Ratings Diff %'] = report[dp + ' Post Imp'] /report[dp + ' Forecast Imp'] -1
         
 
-
     report['Total Booked Dollars'] = report['Prime Booked Dollars'] + report['Non-Prime Booked Dollars']
     report['Total Dollars %'] = np.nan
 
@@ -2816,24 +2826,26 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
     report['Total Imp Delv %'] = (report_pvt['Post Imp']['Prime']['N'] +  report_pvt['Post Imp']['Prime']['Y']\
                                  + report_pvt['Post Imp']['Non-Prime']['N'] +  report_pvt['Post Imp']['Non-Prime']['Y']) \
                         / (report_pvt['Guar Imp']['Prime']['N'] +  report_pvt['Guar Imp']['Non-Prime']['N'])
-
     
      # total delv < 70% and P ratings diff >10% and NP > 10%
-    report.loc[:, 'Warning Flag'] = np.where((report['Total Imp Delv %']<0.7) \
+    report['Warning Flag'] = np.where((report['Total Imp Delv %']<0.7) \
                                       | (report['Prime Ratings Diff %'].abs() >0.1) \
                                       | (report['Non-Prime Ratings Diff %'].abs() > 0.1)\
                                       | (report['Total Imp Delv %'] > 1.1), 'Yes', 'No') 
   
     for i in range(len(q_list)):
-        q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
-        p_dollars = report_pvt[report_pvt['Year + Quarter'] == q]['Booked Dollars']['Prime']['N'].sum()
-        np_dollars = report_pvt[report_pvt['Year + Quarter']==q]['Booked Dollars']['Non-Prime']['N'].sum()
-        total_dollars = p_dollars + np_dollars
-        report.loc[report['Year + Quarter'] == q, 'Prime Dollars %'] = report[report['Year + Quarter'] == q]['Prime Booked Dollars']/p_dollars
-        report.loc[report['Year + Quarter'] == q, 'Non-Prime Dollars %'] = report[report['Year + Quarter'] == q]['Non-Prime Booked Dollars']/np_dollars
-        report.loc[report['Year + Quarter'] == q, 'Total Dollars %'] = report[report['Year + Quarter'] == q]['Total Booked Dollars']/total_dollars
+        try:
+            q = str(q_list[i][0]) + ' ' + str(q_list[i][1]) + 'Q'
+            p_dollars = report_pvt[report_pvt['Year + Quarter'] == q]['Booked Dollars']['Prime']['N'].sum()
+            np_dollars = report_pvt[report_pvt['Year + Quarter']==q]['Booked Dollars']['Non-Prime']['N'].sum()
+            total_dollars = p_dollars + np_dollars
+            report.loc[report['Year + Quarter'] == q, 'Prime Dollars %'] = report[report['Year + Quarter'] == q]['Prime Booked Dollars']/p_dollars
+            report.loc[report['Year + Quarter'] == q, 'Non-Prime Dollars %'] = report[report['Year + Quarter'] == q]['Non-Prime Booked Dollars']/np_dollars
+            report.loc[report['Year + Quarter'] == q, 'Total Dollars %'] = report[report['Year + Quarter'] == q]['Total Booked Dollars']/total_dollars
 
- 
+        except:
+            pass
+        
     report.sort_values(['Year + Quarter', 'Total Booked Dollars'], ascending=[True, False], inplace=True)
     report = report.drop(report.index[0])
     
@@ -2845,7 +2857,6 @@ def new_rating_tab(liab_update, raw1, four_q, all_ratings):
                     'Total Guar Imp', 'Total Post Imp', 'Total Imp Delv %', 'Warning Flag']]
     
     return report
-
 
 
 def liability_qtr_report(basic, liab_update, cur_q):
@@ -2972,7 +2983,5 @@ def main(Q_num = 1):
     copy_to_reports()
     print('Total Time: ', t9 - t1)
     return
-
-
 
 main()
